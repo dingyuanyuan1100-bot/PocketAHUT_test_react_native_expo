@@ -46,7 +46,7 @@ App 的每一屏先在腾讯 Ardot 画布上完成视觉稿，确认后再落到
 
 <table>
 <tr>
-<td align="center"><img src="docs/screens/app/01-首页.png" width="220"><br><b>首页</b><br><sub>服务宫格，按真实可用性区分可点/待办</sub></td>
+
 <td align="center"><img src="docs/screens/app/02-食堂查询.png" width="220"><br><b>食堂查询</b><br><sub>真实菜品库，2600+ 道菜</sub></td>
 </tr>
 <tr>
