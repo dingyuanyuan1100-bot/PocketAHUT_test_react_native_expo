@@ -4,7 +4,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { usePageSwiper } from '../hook/usePageSwiper';
+import { usePageSwiper } from '../hooks/usePageSwiper';
 import { usePagerLocked } from '../lib/pagerLock';
 import HomePage from '../page/HomePage';
 import CourseTablePage from '../page/CourseTablePage';
