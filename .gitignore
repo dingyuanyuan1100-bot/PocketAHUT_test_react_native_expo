@@ -13,6 +13,7 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
@@ -39,3 +40,17 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# broken dependency backup
+node_modules_broken_backup/
+
+# local work / verification temp (headless-chrome profiles, probe scripts, bundle dumps)
+.wb-tmp/
+.workbuddy/
+
+# build & debug logs
+build*.log
+*.bak
+
+# icon preview artifacts
+icon_preview*.png
