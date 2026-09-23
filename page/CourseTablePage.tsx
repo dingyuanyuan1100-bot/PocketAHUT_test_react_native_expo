@@ -257,7 +257,7 @@ type Draft = {
 const EMPTY_DRAFT: Draft = { name: '', teacher: '', room: '', weekday: 1, s1: 1, s2: 2 };
 
 /** 第 2 页：课程表（真实接口 + 六态） */
-export default function CourseTablePage() {
+export default function CourseTablePage({ animate = false }: { animate?: boolean }) {
   const { width } = useWindowDimensions();
   const { status, courses, error, refetch, isRefreshing } = useCourseSchedule();
   // 开学日期：用于推算「第几周」，取不到就退化为第 1 周（不编日期）
@@ -928,7 +928,7 @@ export default function CourseTablePage() {
           */}
           <View style={styles.gridBleed}>
             {/* 固定左轨：先落位，其余列随后依次错峰进入 */}
-            <StaggerIn index={0} step={STEP_4_FRAMES} style={styles.rail}>
+            <StaggerIn index={0} step={STEP_4_FRAMES} active={animate} style={styles.rail}>
               <View style={styles.monthBox}>
                 <Text style={styles.monthText}>
                   {days?.[0]?.date ? `${days[0].date.split('/')[0]}月` : ''}
@@ -1017,7 +1017,7 @@ export default function CourseTablePage() {
                             weekend && weekendFolded && styles.daySlotFolded,
                           ]}
                         >
-                          <StaggerIn index={ci + 1} step={STEP_4_FRAMES} style={styles.daySlotFill}>
+                          <StaggerIn index={ci + 1} step={STEP_4_FRAMES} active={animate} style={styles.daySlotFill}>
                             <Sticker
                               style={styles.dayCell}
                               fill={day?.today ? C.lime : C.white}

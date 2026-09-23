@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import RevealGroup from '../template/RevealGroup';
 import SubPageShell from '../template/SubPageShell';
 import StateCard, { toErrorBar } from '../template/StateCard';
 import StatusPill, { GuestPill } from '../template/StatusPill';
@@ -99,7 +100,7 @@ export default function ExamPage() {
       )}
 
       {status === 'ready' && (
-        <>
+        <RevealGroup>
           {groups.map((group) => {
             const isUnknown = group.key === 'unknown';
             const { md, weekday } = isUnknown
@@ -133,7 +134,7 @@ export default function ExamPage() {
               已归入「时间待定」并按原文展示。
             </Text>
           )}
-        </>
+        </RevealGroup>
       )}
     </SubPageShell>
   );

@@ -30,8 +30,9 @@ const SATELLITE_ITEMS = [
 
 // 四个页面在切换 tab 时无须重渲染 —— activeIndex 只影响导航栏与胶囊。
 // 不包 memo 的话，每次切页都会把四页（含课程表大网格）全部重新渲染一遍，
-// 这是原生端切页卡顿的主要来源之一。三个无 props 页面会彻底跳过重渲染；
-// HomePage 仅在 animate 真正变化时才重渲染。
+// 这是原生端切页卡顿的主要来源之一。
+// 传了 animate 的三页（首页 / 服务 / 我的）靠 memo 的浅比较把关：
+// 只有「自己那一格被划到」时 animate 才翻转，其余切换一律跳过重渲染。
 const MemoHomePage = memo(HomePage);
 const MemoCourseTablePage = memo(CourseTablePage);
 const MemoServicePage = memo(ServicePage);
@@ -114,13 +115,24 @@ export default function HomeScreen() {
           <MemoHomePage animate={revealed} />
         </View>
         <View style={[styles.page, { width: screenWidth, height: pagerHeight || undefined }]}>
-          <MemoCourseTablePage />
+          {/*
+            课程表也常驻挂载，而它的课程列自带错峰落位 —— 不接这个信号的话，
+            App 启动（或登录后）数据一到就在第 1 页把错峰播完了，
+            用户真划过来时只剩静止画面。
+          */}
+          <MemoCourseTablePage animate={activeIndex === 1} />
         </View>
         <View style={[styles.page, { width: screenWidth, height: pagerHeight || undefined }]}>
-          <MemoServicePage />
+          {/*
+            服务 / 我的两页常驻挂载（靠横向分页器切换，没有 push 转场），
+            所以入场信号只能取「自己那一格被划到」。
+            用 activeIndex 而不是启动页的 revealed：后者一开场就是 true，
+            会让这两页在用户还没划过来时就把错峰播完，划过去只剩静止画面。
+          */}
+          <MemoServicePage animate={activeIndex === 2} />
         </View>
         <View style={[styles.page, { width: screenWidth, height: pagerHeight || undefined }]}>
-          <MemoProfilePage />
+          <MemoProfilePage animate={activeIndex === 3} />
         </View>
       </ScrollView>
 

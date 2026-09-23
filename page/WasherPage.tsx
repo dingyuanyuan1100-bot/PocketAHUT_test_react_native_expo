@@ -7,6 +7,7 @@ import LoadingCard from '../template/LoadingCard';
 import PageHeader from '../template/PageHeader';
 import StateCard from '../template/StateCard';
 import Sticker from '../template/Sticker';
+import RevealGroup from '../template/RevealGroup';
 import SubPageShell from '../template/SubPageShell';
 import { C, DISPLAY, inkA, R, SHADOW } from '../template/theme';
 
@@ -120,73 +121,75 @@ export default function WasherPage() {
             backLeft
           />
 
-          {/* ===================== 大数字统计 ===================== */}
-          <View style={styles.heroStat}>
-            <View style={styles.heroCountRow}>
-              <Text style={styles.heroNumber}>{summary.total}</Text>
-              <Text style={styles.heroUnit}>台洗衣机</Text>
-            </View>
+          <RevealGroup>
+            {/* ===================== 大数字统计 ===================== */}
+            <View style={styles.heroStat}>
+              <View style={styles.heroCountRow}>
+                <Text style={styles.heroNumber}>{summary.total}</Text>
+                <Text style={styles.heroUnit}>台洗衣机</Text>
+              </View>
 
-            <View style={styles.statusPill}>
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: noneFree ? C.ink : C.limeDeep },
-                ]}
-              />
-              <Text style={styles.statusPillText}>
-                {allFree ? '全部空闲' : noneFree ? '全部使用中' : `${summary.freeCount} 台空闲`}
+              <View style={styles.statusPill}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    { backgroundColor: noneFree ? C.ink : C.limeDeep },
+                  ]}
+                />
+                <Text style={styles.statusPillText}>
+                  {allFree ? '全部空闲' : noneFree ? '全部使用中' : `${summary.freeCount} 台空闲`}
+                </Text>
+              </View>
+
+              <Text style={styles.heroCaption}>
+                设备按你绑定的宿舍楼栋与楼层筛选 · {summary.busyCount} 台使用中
               </Text>
             </View>
 
-            <Text style={styles.heroCaption}>
-              设备按你绑定的宿舍楼栋与楼层筛选 · {summary.busyCount} 台使用中
-            </Text>
-          </View>
+            {/* ===================== 洗衣机状态卡 ===================== */}
+            <View style={styles.statusCard}>
+              <Text style={styles.statusCardTitle}>洗衣机状态</Text>
+              <View style={styles.divider} />
 
-          {/* ===================== 洗衣机状态卡 ===================== */}
-          <View style={styles.statusCard}>
-            <Text style={styles.statusCardTitle}>洗衣机状态</Text>
-            <View style={styles.divider} />
-
-            {devices.map((w, i) => {
-              const free = isDeviceFree(w);
-              const finish = finishText(w);
-              return (
-                <View key={`${w.name}-${i}`}>
-                  <View style={styles.row}>
-                    <View style={styles.rowIcon}>
-                      <Feather name="loader" size={18} color={C.ink} />
+              {devices.map((w, i) => {
+                const free = isDeviceFree(w);
+                const finish = finishText(w);
+                return (
+                  <View key={`${w.name}-${i}`}>
+                    <View style={styles.row}>
+                      <View style={styles.rowIcon}>
+                        <Feather name="loader" size={18} color={C.ink} />
+                      </View>
+                      <View style={styles.rowText}>
+                        <Text style={styles.rowLocation} numberOfLines={1}>
+                          {w.name}
+                        </Text>
+                        {finish ? <Text style={styles.rowSub}>{finish}</Text> : null}
+                      </View>
+                      <View style={[styles.stateBadge, { backgroundColor: free ? C.lime : C.oat }]}>
+                        <Text style={styles.stateBadgeText}>
+                          {LAUNDRY_STATE_TEXT[w.state] ?? '使用中'}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.rowText}>
-                      <Text style={styles.rowLocation} numberOfLines={1}>
-                        {w.name}
-                      </Text>
-                      {finish ? <Text style={styles.rowSub}>{finish}</Text> : null}
-                    </View>
-                    <View style={[styles.stateBadge, { backgroundColor: free ? C.lime : C.oat }]}>
-                      <Text style={styles.stateBadgeText}>
-                        {LAUNDRY_STATE_TEXT[w.state] ?? '使用中'}
-                      </Text>
-                    </View>
+                    {i < devices.length - 1 && <View style={styles.divider} />}
                   </View>
-                  {i < devices.length - 1 && <View style={styles.divider} />}
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
 
-          {/* ===================== CTA =====================
-              只能刷新：后端没有给设备 ID，也没有洗衣的扫码/下单接口 */}
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={[styles.cta, isRefreshing && styles.ctaBusy]}
-            onPress={() => refetch()}
-            disabled={isRefreshing}
-          >
-            <Feather name="refresh-cw" size={16} color={C.lime} />
-            <Text style={styles.ctaText}>{isRefreshing ? '刷新中…' : '刷新状态'}</Text>
-          </TouchableOpacity>
+            {/* ===================== CTA =====================
+                只能刷新：后端没有给设备 ID，也没有洗衣的扫码/下单接口 */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[styles.cta, isRefreshing && styles.ctaBusy]}
+              onPress={() => refetch()}
+              disabled={isRefreshing}
+            >
+              <Feather name="refresh-cw" size={16} color={C.lime} />
+              <Text style={styles.ctaText}>{isRefreshing ? '刷新中…' : '刷新状态'}</Text>
+            </TouchableOpacity>
+          </RevealGroup>
         </Sticker>
       </ScrollView>
     </View>

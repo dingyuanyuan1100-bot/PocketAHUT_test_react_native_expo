@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import PageHeader from '../template/PageHeader';
+import RevealGroup from '../template/RevealGroup';
 import Sticker from '../template/Sticker';
 import { C, DISPLAY, FeatherName, inkA, R, SHADOW } from '../template/theme';
 
@@ -62,46 +63,48 @@ export default function CampusMapPage() {
         </Sticker>
 
         {/* ===================== 搜索框 ===================== */}
-        <Sticker fill={C.white} radius={12} offset={SHADOW.md} wrapStyle={styles.searchWrap} style={styles.search}>
-          <Feather name="search" size={16} color={inkA(0.55)} />
-          <Text style={styles.searchPlaceholder}>搜索目的地</Text>
-        </Sticker>
+        <RevealGroup>
+          <Sticker fill={C.white} radius={12} offset={SHADOW.md} wrapStyle={styles.searchWrap} style={styles.search}>
+            <Feather name="search" size={16} color={inkA(0.55)} />
+            <Text style={styles.searchPlaceholder}>搜索目的地</Text>
+          </Sticker>
 
-        {/* ===================== 分类 chips ===================== */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {CATS.map((c) => {
-            const on = c === cat;
-            return (
-              <TouchableOpacity key={c} activeOpacity={0.8} onPress={() => setCat(c)}>
-                <View style={[styles.chip, on && styles.chipOn]}>
-                  <Text style={[styles.chipText, on && styles.chipTextOn]}>{c}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+          {/* ===================== 分类 chips ===================== */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+            {CATS.map((c) => {
+              const on = c === cat;
+              return (
+                <TouchableOpacity key={c} activeOpacity={0.8} onPress={() => setCat(c)}>
+                  <View style={[styles.chip, on && styles.chipOn]}>
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{c}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-        {/* ===================== 地点列表 ===================== */}
-        <Sticker fill={C.white} radius={R.hero} offset={SHADOW.lg} style={styles.listCard}>
-          {list.map((s, i) => (
-            <View key={s.name}>
-              <TouchableOpacity activeOpacity={0.8} style={styles.spotRow}>
-                <View style={styles.spotIcon}>
-                  <Feather name={s.icon} size={18} color={C.ink} />
-                </View>
-                <View style={styles.spotText}>
-                  <Text style={styles.spotName}>{s.name}</Text>
-                  <Text style={styles.spotMeta}>
-                    {s.zone} · {s.distance}
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={inkA(0.45)} />
-              </TouchableOpacity>
-              {i < list.length - 1 && <View style={styles.divider} />}
-            </View>
-          ))}
-          {list.length === 0 && <Text style={styles.empty}>该分类下暂无地点</Text>}
-        </Sticker>
+          {/* ===================== 地点列表 ===================== */}
+          <Sticker fill={C.white} radius={R.hero} offset={SHADOW.lg} style={styles.listCard}>
+            {list.map((s, i) => (
+              <View key={s.name}>
+                <TouchableOpacity activeOpacity={0.8} style={styles.spotRow}>
+                  <View style={styles.spotIcon}>
+                    <Feather name={s.icon} size={18} color={C.ink} />
+                  </View>
+                  <View style={styles.spotText}>
+                    <Text style={styles.spotName}>{s.name}</Text>
+                    <Text style={styles.spotMeta}>
+                      {s.zone} · {s.distance}
+                    </Text>
+                  </View>
+                  <Feather name="chevron-right" size={18} color={inkA(0.45)} />
+                </TouchableOpacity>
+                {i < list.length - 1 && <View style={styles.divider} />}
+              </View>
+            ))}
+            {list.length === 0 && <Text style={styles.empty}>该分类下暂无地点</Text>}
+          </Sticker>
+        </RevealGroup>
       </ScrollView>
     </View>
   );

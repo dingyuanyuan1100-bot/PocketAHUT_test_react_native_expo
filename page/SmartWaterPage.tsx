@@ -7,6 +7,7 @@ import { useWiseOrders } from '../hooks/useWiseOrders';
 import { useWiseScan } from '../hooks/useWiseScan';
 import LoadingCard from '../template/LoadingCard';
 import PageHeader from '../template/PageHeader';
+import RevealGroup from '../template/RevealGroup';
 import StateCard from '../template/StateCard';
 import Sticker from '../template/Sticker';
 import WiseScanCard from './WiseScanCard';
@@ -220,9 +221,12 @@ export default function SmartWaterPage() {
 
           {status === 'ready' && (
             <View style={styles.orderList}>
-              {orders.map((o) => (
-                <OrderRow key={o.serial || `${o.createDate}-${o.posName}`} order={o} />
-              ))}
+              {/* 订单逐条落位；超过一屏的部分由 RevealGroup 的 maxStagger 收住 */}
+              <RevealGroup>
+                {orders.map((o) => (
+                  <OrderRow key={o.serial || `${o.createDate}-${o.posName}`} order={o} />
+                ))}
+              </RevealGroup>
             </View>
           )}
 

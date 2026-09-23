@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useNewsArticle } from '../hooks/useNewsArticle';
 import type { NewsBlock, NewsRun } from '../lib/newsHtml';
 import PageHeader from '../template/PageHeader';
+import RevealGroup from '../template/RevealGroup';
 import Sticker from '../template/Sticker';
 import { BORDER, C, DISPLAY, inkA, R, SHADOW } from '../template/theme';
 
@@ -81,135 +82,137 @@ export default function NewsDetailPage() {
         </Sticker>
 
         {/* ===================== 文章卡 ===================== */}
-        <Sticker
-          fill={C.white}
-          radius={R.hero}
-          offset={SHADOW.lg}
-          wrapStyle={styles.articleCardWrap}
-          style={styles.articleCard}
-        >
-          {cat ? (
-            <View style={styles.catPill}>
-              <Text style={styles.catPillText}>{cat}</Text>
-            </View>
-          ) : null}
+        <RevealGroup>
+          <Sticker
+            fill={C.white}
+            radius={R.hero}
+            offset={SHADOW.lg}
+            wrapStyle={styles.articleCardWrap}
+            style={styles.articleCard}
+          >
+            {cat ? (
+              <View style={styles.catPill}>
+                <Text style={styles.catPillText}>{cat}</Text>
+              </View>
+            ) : null}
 
-          <Text style={[styles.articleTitle, big && styles.articleTitleBig]}>{title}</Text>
+            <Text style={[styles.articleTitle, big && styles.articleTitleBig]}>{title}</Text>
 
-          <Text style={styles.articleMeta}>
-            {['安徽工业大学新闻网', date, hasFullText ? '全文' : '摘要'].filter(Boolean).join(' · ')}
-          </Text>
-        </Sticker>
+            <Text style={styles.articleMeta}>
+              {['安徽工业大学新闻网', date, hasFullText ? '全文' : '摘要'].filter(Boolean).join(' · ')}
+            </Text>
+          </Sticker>
 
-        {/* ===================== 正文卡 ===================== */}
-        <Sticker
-          fill={C.white}
-          radius={R.hero}
-          offset={SHADOW.lg}
-          wrapStyle={styles.bodyCardWrap}
-          style={styles.bodyCard}
-        >
-          {/* ---------- 全文已到 ---------- */}
-          {hasFullText && <ArticleBody blocks={blocks} font={bodyFont} line={bodyLine} />}
+          {/* ===================== 正文卡 ===================== */}
+          <Sticker
+            fill={C.white}
+            radius={R.hero}
+            offset={SHADOW.lg}
+            wrapStyle={styles.bodyCardWrap}
+            style={styles.bodyCard}
+          >
+            {/* ---------- 全文已到 ---------- */}
+            {hasFullText && <ArticleBody blocks={blocks} font={bodyFont} line={bodyLine} />}
 
-          {/* ---------- 全文没到：先用列表摘要兜底 ---------- */}
-          {!hasFullText && (
-            <>
-              <Text style={[styles.paragraph, { fontSize: bodyFont, lineHeight: bodyLine }]}>
-                {summary || '这条资讯没有随列表返回摘要内容。'}
-              </Text>
+            {/* ---------- 全文没到：先用列表摘要兜底 ---------- */}
+            {!hasFullText && (
+              <>
+                <Text style={[styles.paragraph, { fontSize: bodyFont, lineHeight: bodyLine }]}>
+                  {summary || '这条资讯没有随列表返回摘要内容。'}
+                </Text>
 
-              {status === 'loading' && (
-                <View style={styles.pendingRow}>
-                  <View style={styles.pendingDot} />
-                  <Text style={styles.pendingText}>正在获取全文…</Text>
-                </View>
-              )}
+                {status === 'loading' && (
+                  <View style={styles.pendingRow}>
+                    <View style={styles.pendingDot} />
+                    <Text style={styles.pendingText}>正在获取全文…</Text>
+                  </View>
+                )}
 
-              {status === 'guest' && (
-                <>
+                {status === 'guest' && (
+                  <>
+                    <View style={styles.hintBox}>
+                      <Feather name="lock" size={14} color={C.ink} />
+                      <Text style={styles.hintText}>
+                        以上是资讯摘要。正文全文需要登录后才能获取。
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => router.push('/login' as never)}
+                      style={styles.ctaWrap}
+                    >
+                      <Sticker fill={C.ink} radius={R.pill} offset={SHADOW.lg} style={styles.cta}>
+                        <Text style={styles.ctaText}>登录查看全文</Text>
+                        <Feather name="arrow-right" size={16} color={C.lime} />
+                      </Sticker>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {status === 'empty' && (
                   <View style={styles.hintBox}>
-                    <Feather name="lock" size={14} color={C.ink} />
+                    <Feather name="info" size={14} color={C.ink} />
                     <Text style={styles.hintText}>
-                      以上是资讯摘要。正文全文需要登录后才能获取。
+                      后端拿到网页了，但没能从中解析出正文区域 —— 这类版面（纯图集 / 特殊模板）只能去原文看。
                     </Text>
                   </View>
+                )}
 
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => router.push('/login' as never)}
-                    style={styles.ctaWrap}
-                  >
-                    <Sticker fill={C.ink} radius={R.pill} offset={SHADOW.lg} style={styles.cta}>
-                      <Text style={styles.ctaText}>登录查看全文</Text>
-                      <Feather name="arrow-right" size={16} color={C.lime} />
-                    </Sticker>
-                  </TouchableOpacity>
-                </>
-              )}
+                {status === 'error' && (
+                  <>
+                    <View style={styles.hintBox}>
+                      <Feather name="alert-triangle" size={14} color={C.ink} />
+                      <Text style={styles.hintText}>
+                        <Text style={styles.errorCode}>{error?.errorCode ?? 'UPSTREAM_ERROR'}</Text>
+                        {` · ${error?.message ?? '获取文章失败'}`}
+                      </Text>
+                    </View>
 
-              {status === 'empty' && (
-                <View style={styles.hintBox}>
-                  <Feather name="info" size={14} color={C.ink} />
-                  <Text style={styles.hintText}>
-                    后端拿到网页了，但没能从中解析出正文区域 —— 这类版面（纯图集 / 特殊模板）只能去原文看。
-                  </Text>
-                </View>
-              )}
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={() => refetch()}
+                      style={styles.ctaWrap}
+                    >
+                      <Sticker fill={C.ink} radius={R.pill} offset={SHADOW.lg} style={styles.cta}>
+                        <Text style={styles.ctaText}>重新加载全文</Text>
+                      </Sticker>
+                    </TouchableOpacity>
+                  </>
+                )}
 
-              {status === 'error' && (
-                <>
-                  <View style={styles.hintBox}>
-                    <Feather name="alert-triangle" size={14} color={C.ink} />
-                    <Text style={styles.hintText}>
-                      <Text style={styles.errorCode}>{error?.errorCode ?? 'UPSTREAM_ERROR'}</Text>
-                      {` · ${error?.message ?? '获取文章失败'}`}
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => refetch()}
-                    style={styles.ctaWrap}
-                  >
-                    <Sticker fill={C.ink} radius={R.pill} offset={SHADOW.lg} style={styles.cta}>
-                      <Text style={styles.ctaText}>重新加载全文</Text>
-                    </Sticker>
-                  </TouchableOpacity>
-                </>
-              )}
-
-              {/* 全文拿不到时，原文永远是可靠的出口 */}
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={openOrigin}
-                disabled={!url}
-                style={styles.ctaWrap}
-              >
-                <Sticker
-                  fill={C.white}
-                  radius={R.pill}
-                  offset={url ? SHADOW.md : 0}
-                  border={BORDER}
-                  style={styles.cta}
+                {/* 全文拿不到时，原文永远是可靠的出口 */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={openOrigin}
+                  disabled={!url}
+                  style={styles.ctaWrap}
                 >
-                  <Text style={[styles.ctaText, { color: C.ink }]}>在浏览器打开原文</Text>
-                  {url ? <Feather name="arrow-up-right" size={16} color={C.ink} /> : null}
-                </Sticker>
-              </TouchableOpacity>
-            </>
-          )}
+                  <Sticker
+                    fill={C.white}
+                    radius={R.pill}
+                    offset={url ? SHADOW.md : 0}
+                    border={BORDER}
+                    style={styles.cta}
+                  >
+                    <Text style={[styles.ctaText, { color: C.ink }]}>在浏览器打开原文</Text>
+                    {url ? <Feather name="arrow-up-right" size={16} color={C.ink} /> : null}
+                  </Sticker>
+                </TouchableOpacity>
+              </>
+            )}
 
-          {/* ---------- 全文已到时，底部仍留一个原文出口 ---------- */}
-          {hasFullText && (
-            <View style={styles.originBox}>
-              <Feather name="check-circle" size={14} color={C.ink} />
-              <Text style={styles.originText}>
-                正文来自学校新闻网原文，图片与排版都做了移动端简化。
-              </Text>
-            </View>
-          )}
-        </Sticker>
+            {/* ---------- 全文已到时，底部仍留一个原文出口 ---------- */}
+            {hasFullText && (
+              <View style={styles.originBox}>
+                <Feather name="check-circle" size={14} color={C.ink} />
+                <Text style={styles.originText}>
+                  正文来自学校新闻网原文，图片与排版都做了移动端简化。
+                </Text>
+              </View>
+            )}
+          </Sticker>
+        </RevealGroup>
       </ScrollView>
 
       {/* ===================== 底部工具条 ===================== */}

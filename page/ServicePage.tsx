@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import RevealGroup, { STEP_4_FRAMES } from '../template/RevealGroup';
+import StaggerIn from '../template/StaggerIn';
 import Sticker from '../template/Sticker';
 import { BORDER, C, DISPLAY, FeatherName, inkA, R, SHADOW } from '../template/theme';
 
@@ -88,7 +90,7 @@ const BASES: { bg: string; fg: string }[] = [
 ];
 
 /** 第 3 页：服务（分类导轨 + 服务列表） */
-export default function ServicePage() {
+export default function ServicePage({ animate = false }: { animate?: boolean }) {
   const [cat, setCat] = useState('study');
   const list = SERVICES[cat] ?? [];
   const catIndex = Math.max(0, CATS.findIndex((c) => c.key === cat));
@@ -199,42 +201,49 @@ export default function ServicePage() {
           showsVerticalScrollIndicator={false}
         >
           <Sticker clip radius={R.card} offset={SHADOW.md} fill={C.white} style={styles.listCard}>
-            {list.map((s, i) => {
-              const base = BASES[i % BASES.length];
-              const live = !!s.route;
-              return (
-                <View key={s.title}>
-                  {i > 0 && <View style={styles.divider} />}
-                  <TouchableOpacity
-                    style={[styles.row, !live && styles.rowPending]}
-                    activeOpacity={live ? 0.7 : 1}
-                    disabled={!live}
-                    onPress={() => {
-                      if (s.route) router.push(s.route as never);
-                    }}
-                  >
-                    <View style={[styles.iconBase, { backgroundColor: base.bg }]}>
-                      <Feather name={s.icon} size={18} color={base.fg} />
-                    </View>
-                    <View style={styles.rowText}>
-                      <Text style={styles.rowTitle} numberOfLines={1}>
-                        {s.title}
-                      </Text>
-                      <Text style={styles.rowSub} numberOfLines={1}>
-                        {s.sub}
-                      </Text>
-                    </View>
-                    {live ? (
-                      <Feather name="chevron-right" size={18} color={inkA(0.35)} />
-                    ) : (
-                      <View style={styles.pendingTag}>
-                        <Text style={styles.pendingText}>待接入</Text>
+            {/*
+              服务行逐行错峰落位。这里用 RevealGroup 而不是手写 `StaggerIn index`：
+              分类下可能有 20 多行，靠它的 maxStagger 把屏外那些行的落位时刻收住，
+              否则按 4 帧排下去要 1.5 秒才结束，用户早就划走了。
+            */}
+            <RevealGroup active={animate} waitForTransition={false}>
+              {list.map((s, i) => {
+                const base = BASES[i % BASES.length];
+                const live = !!s.route;
+                return (
+                  <View key={s.title}>
+                    {i > 0 && <View style={styles.divider} />}
+                    <TouchableOpacity
+                      style={[styles.row, !live && styles.rowPending]}
+                      activeOpacity={live ? 0.7 : 1}
+                      disabled={!live}
+                      onPress={() => {
+                        if (s.route) router.push(s.route as never);
+                      }}
+                    >
+                      <View style={[styles.iconBase, { backgroundColor: base.bg }]}>
+                        <Feather name={s.icon} size={18} color={base.fg} />
                       </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
+                      <View style={styles.rowText}>
+                        <Text style={styles.rowTitle} numberOfLines={1}>
+                          {s.title}
+                        </Text>
+                        <Text style={styles.rowSub} numberOfLines={1}>
+                          {s.sub}
+                        </Text>
+                      </View>
+                      {live ? (
+                        <Feather name="chevron-right" size={18} color={inkA(0.35)} />
+                      ) : (
+                        <View style={styles.pendingTag}>
+                          <Text style={styles.pendingText}>待接入</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </RevealGroup>
           </Sticker>
         </ScrollView>
       </View>

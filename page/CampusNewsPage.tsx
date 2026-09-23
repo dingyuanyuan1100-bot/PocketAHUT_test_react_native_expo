@@ -6,6 +6,7 @@ import { NEWS_TYPE_OPTIONS, type NewsItem, type NewsType } from '../api/contract
 import { useNews } from '../hooks/useNews';
 import LoadingCard from '../template/LoadingCard';
 import PageHeader from '../template/PageHeader';
+import RevealGroup from '../template/RevealGroup';
 import StateCard from '../template/StateCard';
 import Sticker from '../template/Sticker';
 import { BORDER, C, DISPLAY, inkA, R, SHADOW } from '../template/theme';
@@ -140,7 +141,7 @@ export default function CampusNewsPage() {
 
             {/* ---------------- 有数据 ---------------- */}
             {!isLoading && !isError && headline && (
-              <>
+              <RevealGroup>
                 {/* 置顶头条 */}
                 <TouchableOpacity activeOpacity={0.9} onPress={() => openDetail(headline)}>
                   <Sticker
@@ -227,7 +228,7 @@ export default function CampusNewsPage() {
                     </View>
                   </Sticker>
                 )}
-              </>
+              </RevealGroup>
             )}
           </View>
         </View>

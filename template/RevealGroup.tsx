@@ -1,6 +1,7 @@
 import { Children } from 'react';
 import type { ReactNode } from 'react';
 import StaggerIn from './StaggerIn';
+import { usePageEnterReady } from './motion/pageEnter';
 
 /**
  * 错峰淡入的间隔：**4 帧 @60fps ≈ 66.7ms**。
@@ -18,6 +19,18 @@ type Props = {
   step?: number;
   /** 整组起始延迟 */
   delay?: number;
+  /**
+   * 是否让位给「页面进栈转场」，默认 true。
+   *
+   * push 进来的二级页，滑入动画要跑约 380ms（见 `motion/pageEnter.tsx`）；
+   * 内容若跟着挂载就落位，用户看到的是「页面还没滑到位，内容已经全落完了」。
+   * 打开本项后，落位会被按住到**转场结束**才放行；数据到位晚于转场时该门控早已放行，
+   * 不会出现「页面已经稳定、内容却迟迟不出现」。
+   *
+   * 常驻挂载的页面（底部 tab 的四页，靠横向分页器切换）**必须传 false**：
+   * 它们没有转场可让位，按住只会让用户划过去之后再空等一次。
+   */
+  waitForTransition?: boolean;
   /**
    * 错峰序号的上限：序号超过它的子项与第 maxStagger 项**同时**落位。
    *
@@ -52,14 +65,25 @@ export default function RevealGroup({
   active = true,
   step = STEP_4_FRAMES,
   delay = 0,
+  waitForTransition = true,
   maxStagger = 6,
   children,
 }: Props) {
+  // 必须无条件调用（hooks 规则）；waitForTransition=false 时取到值也不使用
+  const enterReady = usePageEnterReady();
+  const activeNow = active && (!waitForTransition || enterReady);
+
   const items = Children.toArray(children);
   return (
     <>
       {items.map((child, i) => (
-        <StaggerIn key={i} index={Math.min(i, maxStagger)} step={step} delay={delay} active={active}>
+        <StaggerIn
+          key={i}
+          index={Math.min(i, maxStagger)}
+          step={step}
+          delay={delay}
+          active={activeNow}
+        >
           {child}
         </StaggerIn>
       ))}

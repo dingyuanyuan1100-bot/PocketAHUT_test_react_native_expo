@@ -12,6 +12,8 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import BrandBadge from '../template/BrandBadge';
+import RevealGroup, { STEP_4_FRAMES } from '../template/RevealGroup';
+import StaggerIn from '../template/StaggerIn';
 import Sticker from '../template/Sticker';
 import { C, DISPLAY, FeatherName, R, SHADOW, inkA, limeA } from '../template/theme';
 import { useAuth } from '../store/AuthContext';
@@ -62,7 +64,7 @@ const MENU_OTHER: MenuRow[] = [
 ];
 
 /** 第 4 页：我的（个人中心） */
-export default function ProfilePage() {
+export default function ProfilePage({ animate = false }: { animate?: boolean }) {
   const { user, isAuthed, logout } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -82,11 +84,17 @@ export default function ProfilePage() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      {/* 品牌徽章（对齐画布 6:1 顶部 32:1） */}
-      <BrandBadge />
+      {/*
+        入场序号是**跨两层连续**的：徽章 0 → 主卡 1 → 主体内各块 2 起（见下方 RevealGroup 的 delay）。
+        这样不必把 body 打散成 content 的直接子元素（那会动到 flex 结构），
+        又不会出现「两层各错峰一次、时序互相打架」。
+      */}
+      <StaggerIn index={0} active={animate}>
+        <BrandBadge />
+      </StaggerIn>
 
       {/* ===================== 头部主卡（青柠实心贴纸） ===================== */}
-      <View style={styles.headerWrap}>
+      <StaggerIn index={1} active={animate} style={styles.headerWrap}>
         <Sticker style={styles.headerCard} fill={C.lime} radius={R.cardXl} offset={SHADOW.xxl}>
           {/* 标题行 */}
           <View style={styles.headerTopRow}>
@@ -157,82 +165,89 @@ export default function ProfilePage() {
             </Sticker>
           </View>
         </Sticker>
-      </View>
+      </StaggerIn>
 
       {/* ===================== 主体 ===================== */}
       <View style={styles.body}>
-        {/* 统计行 */}
-        <View style={styles.statsRow}>
-          {STAT_DEFS.map((s) => (
-            <Sticker
-              key={s.label}
-              wrapStyle={styles.statWrap}
-              style={styles.statBox}
-              fill={s.fill}
-              radius={R.stat}
-              offset={SHADOW.lg}
-            >
-              <Text style={[styles.statValue, { color: s.valueColor }]}>{s.value}</Text>
-              <Text style={[styles.statLabel, { color: s.labelColor }]}>{s.label}</Text>
-            </Sticker>
-          ))}
-        </View>
-
-        {/* 说明为什么是「—」，避免用户以为是加载失败 */}
-        <Text style={styles.statsNote}>一卡通 / 绩点 / 二课积分 将在接入对应接口后显示</Text>
-
-        {/* 支持我们 */}
-        <Sticker
-          style={styles.supportCard}
-          fill={C.ink}
-          radius={R.cardLg}
-          offset={SHADOW.xl}
-        >
-          <View style={styles.supportLeft}>
-            <Sticker style={styles.supportIconBox} fill={C.lime} radius={R.iconBox} offset={0}>
-              <Feather name="heart" size={18} color={C.ink} />
-            </Sticker>
-            <View style={styles.supportText}>
-              <Text style={styles.supportTitle}>支持我们</Text>
-              <Text style={styles.supportSub}>观看广告，为项目做贡献</Text>
-            </View>
+        {/*
+          错峰序号从 2 接续上方 content 层的「徽章 0 / 主卡 1」——
+          同一屏内时序连贯，而不是两层各错各的。
+          `waitForTransition={false}`：本页是常驻挂载的 tab 页（横划切换），没有 push 转场可让位。
+        */}
+        <RevealGroup active={animate} waitForTransition={false} delay={STEP_4_FRAMES * 2}>
+          {/* 统计行 */}
+          <View style={styles.statsRow}>
+            {STAT_DEFS.map((s) => (
+              <Sticker
+                key={s.label}
+                wrapStyle={styles.statWrap}
+                style={styles.statBox}
+                fill={s.fill}
+                radius={R.stat}
+                offset={SHADOW.lg}
+              >
+                <Text style={[styles.statValue, { color: s.valueColor }]}>{s.value}</Text>
+                <Text style={[styles.statLabel, { color: s.labelColor }]}>{s.label}</Text>
+              </Sticker>
+            ))}
           </View>
 
+          {/* 说明为什么是「—」，避免用户以为是加载失败 */}
+          <Text style={styles.statsNote}>一卡通 / 绩点 / 二课积分 将在接入对应接口后显示</Text>
+
+          {/* 支持我们 */}
           <Sticker
-            style={styles.supportBtn}
-            fill={C.lime}
-            radius={R.pill}
-            offset={SHADOW.md}
+            style={styles.supportCard}
+            fill={C.ink}
+            radius={R.cardLg}
+            offset={SHADOW.xl}
           >
-            <Text style={styles.supportBtnText}>观看广告</Text>
+            <View style={styles.supportLeft}>
+              <Sticker style={styles.supportIconBox} fill={C.lime} radius={R.iconBox} offset={0}>
+                <Feather name="heart" size={18} color={C.ink} />
+              </Sticker>
+              <View style={styles.supportText}>
+                <Text style={styles.supportTitle}>支持我们</Text>
+                <Text style={styles.supportSub}>观看广告，为项目做贡献</Text>
+              </View>
+            </View>
+
+            <Sticker
+              style={styles.supportBtn}
+              fill={C.lime}
+              radius={R.pill}
+              offset={SHADOW.md}
+            >
+              <Text style={styles.supportBtnText}>观看广告</Text>
+            </Sticker>
           </Sticker>
-        </Sticker>
 
-        {/* 账号管理 / 其他 */}
-        <MenuGroup title="账号管理" rows={MENU_ACCOUNT} />
-        <MenuGroup title="其他" rows={MENU_OTHER} />
+          {/* 账号管理 / 其他 */}
+          <MenuGroup title="账号管理" rows={MENU_ACCOUNT} />
+          <MenuGroup title="其他" rows={MENU_OTHER} />
 
-        {/* 退出登录：真实调用 POST /user/logout，成功后清空会话并回到未登录态 */}
-        {isAuthed ? (
-          <Pressable onPress={onLogout} disabled={loggingOut}>
-            <Sticker style={styles.logoutBtn} fill={C.ink} radius={R.pill} offset={SHADOW.xl}>
-              {loggingOut ? (
-                <ActivityIndicator color={C.lime} />
-              ) : (
-                <Text style={styles.logoutText}>退出登录</Text>
-              )}
-            </Sticker>
-          </Pressable>
-        ) : (
-          <Pressable onPress={() => router.push('/login')}>
-            <Sticker style={styles.logoutBtn} fill={C.ink} radius={R.pill} offset={SHADOW.xl}>
-              <Text style={styles.logoutText}>登录 / 注册</Text>
-            </Sticker>
-          </Pressable>
-        )}
+          {/* 退出登录：真实调用 POST /user/logout，成功后清空会话并回到未登录态 */}
+          {isAuthed ? (
+            <Pressable onPress={onLogout} disabled={loggingOut}>
+              <Sticker style={styles.logoutBtn} fill={C.ink} radius={R.pill} offset={SHADOW.xl}>
+                {loggingOut ? (
+                  <ActivityIndicator color={C.lime} />
+                ) : (
+                  <Text style={styles.logoutText}>退出登录</Text>
+                )}
+              </Sticker>
+            </Pressable>
+          ) : (
+            <Pressable onPress={() => router.push('/login')}>
+              <Sticker style={styles.logoutBtn} fill={C.ink} radius={R.pill} offset={SHADOW.xl}>
+                <Text style={styles.logoutText}>登录 / 注册</Text>
+              </Sticker>
+            </Pressable>
+          )}
 
-        {/* 版本信息 */}
-        <Text style={styles.version}>campus-app v1.0.0</Text>
+          {/* 版本信息 */}
+          <Text style={styles.version}>campus-app v1.0.0</Text>
+        </RevealGroup>
       </View>
     </ScrollView>
   );

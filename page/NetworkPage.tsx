@@ -3,6 +3,8 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import RevealGroup from '../template/RevealGroup';
+import SpeedNumber from '../template/motion/SpeedNumber';
 import SubPageShell from '../template/SubPageShell';
 import StateCard, { toErrorBar } from '../template/StateCard';
 import StatusPill, { GuestPill } from '../template/StatusPill';
@@ -28,6 +30,21 @@ import {
 import type { NetworkLoginRecord, NetworkOnlineDevice } from '../api/contracts/campus';
 
 type Tab = 'account' | 'online' | 'history';
+
+/**
+ * 计数过程中的格式化函数。**必须定义在模块层**：SpeedNumber 把它存进 ref、不进 effect 依赖，
+ * 写成模块常量后引用稳定，读代码的人也一眼看得出。
+ *
+ * ⚠️ 两者都按**目标值锁定单位**，而不是让单位随中间值跳变：
+ * 时长在 60 分处会从「59 分」变成「1 小时」，流量在 1024 M 处会从「1000 MB」变成「0.98 GB」，
+ * 大号数字当场断崖（实测 47 → 1），而且正好发生在指针摆到最快的时候，看着就是 bug。
+ * 所以目标 ≥ 1 小时就整段用「小时」计、≥ 1 GB 就整段用「GB」计。
+ */
+const fmtUsedMinutes = (v: number, target: number) =>
+  target >= 60 ? { num: (v / 60).toFixed(1), unit: '小时' } : splitNumber(formatMinutes(v));
+
+const fmtUsedTraffic = (v: number, target: number) =>
+  target >= 1024 ? { num: (v / 1024).toFixed(2), unit: 'GB' } : splitNumber(formatTrafficMB(v));
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'account', label: '账户' },
@@ -135,7 +152,7 @@ export default function NetworkPage() {
 
       {/* ===================== 账户 ===================== */}
       {tab === 'account' && accountQ.status === 'ready' && (
-        <>
+        <RevealGroup>
           <View style={styles.meterRow}>
             <Sticker
               style={styles.meterCard}
@@ -148,12 +165,14 @@ export default function NetworkPage() {
                 <Feather name="clock" size={14} color={C.lime} />
                 <Text style={[styles.meterLabel, styles.meterLabelDark]}>已用时长</Text>
               </View>
-              <Text style={[styles.meterValue, { color: C.lime }]} numberOfLines={1} adjustsFontSizeToFit>
-                {splitNumber(formatMinutes(accountQ.account?.used_minutes)).num}
-              </Text>
-              <Text style={[styles.meterUnit, styles.meterUnitDark]}>
-                {splitNumber(formatMinutes(accountQ.account?.used_minutes)).unit}
-              </Text>
+              <SpeedNumber
+                value={Number(accountQ.account?.used_minutes)}
+                format={fmtUsedMinutes}
+                numberStyle={[styles.meterValue, { color: C.lime }]}
+                unitStyle={[styles.meterUnit, styles.meterUnitDark]}
+                tint={C.lime}
+                dim="rgba(243,240,232,0.22)"
+              />
             </Sticker>
 
             <Sticker style={styles.meterCard} fill={C.white} radius={R.menu} offset={SHADOW.xl}>
@@ -161,12 +180,14 @@ export default function NetworkPage() {
                 <Feather name="bar-chart-2" size={14} color={C.ink} />
                 <Text style={styles.meterLabel}>已用流量</Text>
               </View>
-              <Text style={styles.meterValue} numberOfLines={1} adjustsFontSizeToFit>
-                {splitNumber(formatTrafficMB(accountQ.account?.used_traffic)).num}
-              </Text>
-              <Text style={styles.meterUnit}>
-                {splitNumber(formatTrafficMB(accountQ.account?.used_traffic)).unit}
-              </Text>
+              <SpeedNumber
+                value={Number(accountQ.account?.used_traffic)}
+                format={fmtUsedTraffic}
+                numberStyle={styles.meterValue}
+                unitStyle={styles.meterUnit}
+                tint={C.ink}
+                dim="rgba(17,18,20,0.18)"
+              />
             </Sticker>
           </View>
 
@@ -202,19 +223,19 @@ export default function NetworkPage() {
               <View style={[styles.onlineDot, { backgroundColor: isOnline(d.online) ? C.lime : C.oat }]} />
             </Sticker>
           ))}
-        </>
+        </RevealGroup>
       )}
 
       {/* ===================== 在线设备 ===================== */}
       {tab === 'online' && onlineQ.status === 'ready' && (
-        <>
+        <RevealGroup>
           <Text style={styles.sectionHint}>
             强行下线会让该设备立即断网，操作不可撤销，请确认是自己的设备。
           </Text>
           {onlineQ.devices.map((d, i) => (
             <OnlineRow key={d.session_id || `${d.mac}-${i}`} device={d} />
           ))}
-        </>
+        </RevealGroup>
       )}
 
       {tab === 'online' && onlineQ.status === 'empty' && (
@@ -229,11 +250,11 @@ export default function NetworkPage() {
 
       {/* ===================== 上网记录 ===================== */}
       {tab === 'history' && historyQ.status === 'ready' && (
-        <>
+        <RevealGroup>
           {historyQ.records.map((r, i) => (
             <HistoryRow key={`${r.online_time}-${r.mac}-${i}`} record={r} />
           ))}
-        </>
+        </RevealGroup>
       )}
 
       {tab === 'history' && historyQ.status === 'empty' && (

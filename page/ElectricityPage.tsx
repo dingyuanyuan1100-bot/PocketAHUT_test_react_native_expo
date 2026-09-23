@@ -12,6 +12,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import RevealGroup from '../template/RevealGroup';
+import SpeedNumber from '../template/motion/SpeedNumber';
 import SubPageShell from '../template/SubPageShell';
 import StateCard, { toErrorBar } from '../template/StateCard';
 import StatusPill, { GuestPill } from '../template/StatusPill';
@@ -142,7 +144,7 @@ export default function ElectricityPage() {
       )}
 
       {status === 'ready' && balanceQ.balance && (
-        <>
+        <RevealGroup>
           <View style={styles.roomRow}>
             <Sticker style={styles.roomChip} fill={C.oat} radius={999} offset={0}>
               <Feather name="home" size={12} color={C.ink} />
@@ -234,7 +236,7 @@ export default function ElectricityPage() {
               单笔限额 0 ~ 500 元。充值前请确认房间号，电费充错房间无法自助退款。
             </Text>
           </Sticker>
-        </>
+        </RevealGroup>
       )}
 
       <PayOrderSheet order={pendingOrder} onClose={() => setPendingOrder(null)} />
@@ -279,10 +281,16 @@ function MeterCard({
         )}
       </View>
 
-      <Text style={[styles.meterValue, { color: valueColor }]} numberOfLines={1} adjustsFontSizeToFit>
-        {Number.isFinite(value) ? value.toFixed(1) : '—'}
-      </Text>
-      <Text style={[styles.meterUnit, isDark && styles.meterUnitDark]}>度</Text>
+      {/* 余额从 0 加速跳到实际值，右侧空白处挂一个仪表盘显示「当前速度」 */}
+      <SpeedNumber
+        value={value}
+        decimals={1}
+        unit="度"
+        numberStyle={[styles.meterValue, { color: valueColor }]}
+        unitStyle={[styles.meterUnit, isDark && styles.meterUnitDark]}
+        tint={isDark ? C.lime : C.ink}
+        dim={isDark ? 'rgba(243,240,232,0.22)' : 'rgba(17,18,20,0.18)'}
+      />
     </Sticker>
   );
 }

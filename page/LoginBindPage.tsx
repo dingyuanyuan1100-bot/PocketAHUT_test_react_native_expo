@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import CollapseReveal from '../template/motion/CollapseReveal';
 import PageHeader from '../template/PageHeader';
 import Sticker from '../template/Sticker';
 import StickerField, { FieldInput } from '../template/StickerField';
@@ -374,6 +376,31 @@ function SegmentPill({ label, active, onPress }: { label: string; active: boolea
   );
 }
 
+/**
+ * 「去绑定 / 收起」的箭头：不做图标切换（chevron-down ↔ chevron-up 是硬切、没有过渡），
+ * 而是让同一个箭头转 180°，开合才有方向感。
+ */
+function SpinChevron({ open, size = 13 }: { open: boolean; size?: number }) {
+  const v = useRef(new Animated.Value(open ? 1 : 0)).current;
+  useEffect(() => {
+    const a = Animated.spring(v, {
+      toValue: open ? 1 : 0,
+      tension: 120,
+      friction: 9,
+      useNativeDriver: true,
+    });
+    a.start();
+    return () => a.stop();
+  }, [open, v]);
+
+  const rotate = v.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
+  return (
+    <Animated.View style={{ transform: [{ rotate }] }}>
+      <Feather name="chevron-down" size={size} color={C.ink} />
+    </Animated.View>
+  );
+}
+
 function Field({
   icon, placeholder, value, onChange, secure, right, keyboardType, autoCapitalize,
 }: {
@@ -539,11 +566,7 @@ function BindCard(props: {
                     >
                       <View style={styles.bindCta}>
                         <Text style={styles.bindCtaText}>{isOpen ? '收起' : '去绑定'}</Text>
-                        <Feather
-                          name={isOpen ? 'chevron-up' : 'chevron-down'}
-                          size={13}
-                          color={C.ink}
-                        />
+                        <SpinChevron open={isOpen} />
                       </View>
                     </TouchableOpacity>
                   )}
@@ -591,9 +614,13 @@ function BindCard(props: {
                   </View>
                 )}
 
-                {/* --- 未绑定且展开：账号密码表单 --- */}
-                {!bound && isOpen && (
-                  <View style={styles.bindForm}>
+                {/* --- 未绑定：账号密码表单（开合有过渡，字段逐个弹性进出）---
+                    这里刻意不写成 `isOpen && (...)`：那样收起是瞬时卸载，退场动画根本没机会播。
+                    挂载与否交给 CollapseReveal 自己管（它在收起动画跑完后才卸载）。
+                    间距改用 bindForm 的 gap 而不是 spacer View —— spacer 会被当成一块内容参与错峰，
+                    序号会错位（改成 gap 后，子块正好是 账号 / 密码 / 按钮 / 说明 四块）。 */}
+                {!bound && (
+                  <CollapseReveal open={isOpen} style={styles.bindForm}>
                     <Field
                       icon="user"
                       placeholder={`${meta.name}账号`}
@@ -601,7 +628,6 @@ function BindCard(props: {
                       onChange={(v) => setBindForm({ ...bindForm, [sys]: { ...f, account: v } })}
                       autoCapitalize="none"
                     />
-                    <View style={styles.formGap} />
                     <Field
                       icon="lock"
                       placeholder="密码"
@@ -609,7 +635,6 @@ function BindCard(props: {
                       onChange={(v) => setBindForm({ ...bindForm, [sys]: { ...f, password: v } })}
                       secure
                     />
-                    <View style={styles.formGap} />
                     <StickerButton
                       label={busy ? '绑定中…' : '确认绑定'}
                       fill={C.lime}
@@ -620,7 +645,7 @@ function BindCard(props: {
                     <Text style={styles.bindNote}>
                       凭据仅用于代查该系统的数据，不会用于其他用途。
                     </Text>
-                  </View>
+                  </CollapseReveal>
                 )}
               </Sticker>
             );
@@ -773,14 +798,17 @@ const styles = StyleSheet.create({
   },
   unbindText: { fontFamily: DISPLAY, fontSize: 12.5, lineHeight: 16, color: C.ink },
 
-  // 展开的绑定表单
+  // 展开的绑定表单。
+  // 间距用 gap 而不是 spacer View：CollapseReveal 会把每个子块当作一块内容来错峰，
+  // spacer 混进去会让账号/密码的落位次序错开。
+  // marginTop 会被 CollapseReveal 换算成展开高度的一部分（Yoga 的 layout 高度不含外边距）。
   bindForm: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: C.hairline,
+    gap: 10,
   },
-  formGap: { height: 10 },
   bindNote: { fontSize: 10.5, lineHeight: 15, color: C.gray, marginTop: 10, paddingHorizontal: 2 },
 
 });
