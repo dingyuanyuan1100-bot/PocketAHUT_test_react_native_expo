@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, memo } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, ScrollView, useWindowDimensions } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,15 @@ const SATELLITE_ITEMS = [
   { icon: "heart",  label: "收藏", angle:   0, radius: 56 },
   { icon: "user",   label: "我的", angle:  61, radius: 61 },
 ] as const;
+
+// 四个页面在切换 tab 时无须重渲染 —— activeIndex 只影响导航栏与胶囊。
+// 不包 memo 的话，每次切页都会把四页（含课程表大网格）全部重新渲染一遍，
+// 这是原生端切页卡顿的主要来源之一。三个无 props 页面会彻底跳过重渲染；
+// HomePage 仅在 animate 真正变化时才重渲染。
+const MemoHomePage = memo(HomePage);
+const MemoCourseTablePage = memo(CourseTablePage);
+const MemoServicePage = memo(ServicePage);
+const MemoProfilePage = memo(ProfilePage);
 
 export default function HomeScreen() {
   // 启动页：revealed = 开始淡出（首页接手错峰落位）；launchGone = 淡出结束、可卸载
@@ -102,16 +111,16 @@ export default function HomeScreen() {
         bounces={false}
       >
         <View style={[styles.page, { width: screenWidth, height: pagerHeight || undefined }]}>
-          <HomePage animate={revealed} />
+          <MemoHomePage animate={revealed} />
         </View>
         <View style={[styles.page, { width: screenWidth, height: pagerHeight || undefined }]}>
-          <CourseTablePage />
+          <MemoCourseTablePage />
         </View>
         <View style={[styles.page, { width: screenWidth, height: pagerHeight || undefined }]}>
-          <ServicePage />
+          <MemoServicePage />
         </View>
         <View style={[styles.page, { width: screenWidth, height: pagerHeight || undefined }]}>
-          <ProfilePage />
+          <MemoProfilePage />
         </View>
       </ScrollView>
 
