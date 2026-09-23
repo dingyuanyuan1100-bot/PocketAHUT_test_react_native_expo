@@ -45,6 +45,27 @@ export const SHADOW = {
   xxl: 5,    // 头部主卡
 };
 
+/**
+ * 表单控件的「聚焦落差」。
+ *
+ * 硬投影 = 控件离桌面的高度。所以「聚焦」在物理上就是**高度降低**：
+ * 本体朝投影方向下沉 `rest - focus`，露出的硬投影随之从 `rest` 收缩到 `focus`。
+ *
+ * 参考范式里的原始表现是：输入框静止 `3px 4px` 硬投影，聚焦时本体下沉、
+ * 投影收缩为 `1px 2px`。**只取这一条聚焦特性**，配色一律沿用贴纸系统
+ * （cream / 燕麦 / 墨黑），不引入范式里的米粉底、墨绿描边与橙色投影。
+ *
+ * 与 `Sticker` 的按下反馈是同一套隐喻的两档强度：
+ *   按钮按下 → 位移 `offset`，高度归零（投影被完全盖住）
+ *   输入聚焦 → 位移 `offset - focus`，高度降低但留一丝厚度
+ *
+ * 两者都只落在 transform 上，纯 GPU 合成、不触发布局重排。
+ */
+export const FIELD_ELEVATION = {
+  rest: SHADOW.lg,  // 3：静止时的高度，与普通卡片同级
+  focus: 1,         // 1：聚焦后残留的高度，保留一点「贴纸张厚度」的实感
+} as const;
+
 /** 展示字体：项目内置的钉钉进步体，承担设计稿里 Noto Sans SC Black 的「海报感」标题与数字 */
 export const DISPLAY = 'DingTalkJinBuTi';
 

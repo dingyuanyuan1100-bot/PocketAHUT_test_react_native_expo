@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -17,8 +16,10 @@ import BrandBadge from '../template/BrandBadge';
 import BottomSheet from '../template/BottomSheet';
 import Chip from '../template/Chip';
 import Sticker from '../template/Sticker';
+import LoadingShell from '../template/LoadingShell';
+import StickerField, { FieldInput } from '../template/StickerField';
 import StatusPill, { GuestPill } from '../template/StatusPill';
-import StateCard from '../template/StateCard';
+import StateCard, { toErrorBar } from '../template/StateCard';
 import ScheduleSkeleton from '../template/ScheduleSkeleton';
 import { BORDER, C, DISPLAY, R, SHADOW, inkA, limeA } from '../template/theme';
 import { useCourseSchedule, useTermStart } from '../hooks/useCourseSchedule';
@@ -282,9 +283,9 @@ export default function CourseTablePage() {
 
       {/* 搜索：纯前端过滤已加载的课表（后端没有课程搜索接口） */}
       {searchOpen && (
-        <Sticker style={styles.searchBox} fill={C.white} radius={R.card} offset={SHADOW.sm}>
+        <StickerField style={styles.searchBox} fill={C.white} radius={R.card}>
           <Feather name="search" size={14} color={inkA(0.45)} />
-          <TextInput
+          <FieldInput
             value={query}
             onChangeText={setQuery}
             placeholder="搜索课名 / 教师 / 教室"
@@ -297,21 +298,15 @@ export default function CourseTablePage() {
               <Feather name="x" size={14} color={C.ink} />
             </Pressable>
           )}
-        </Sticker>
+        </StickerField>
       )}
 
       {/* ===================== 加载中：骨架屏，无任何可点击元素 ===================== */}
       {status === 'loading' && (
-        <Sticker
-          style={styles.loadingCard}
-          wrapStyle={styles.loadingWrap}
-          fill={C.white}
-          radius={R.menu}
-          offset={SHADOW.xl}
-        >
+        <LoadingShell>
           <ScheduleSkeleton />
           <Text style={styles.loadingHint}>正在同步本学期课表…</Text>
-        </Sticker>
+        </LoadingShell>
       )}
 
       {/* ===================== 未登录 ===================== */}
@@ -335,7 +330,7 @@ export default function CourseTablePage() {
         <StateCard
           tone="not_bound"
           icon={<Feather name="calendar" size={30} color={C.ink} />}
-          badge={<Bang />}
+          bang
           title="绑定教务账号查看课表"
           description={'课表由学校教务系统提供\n绑定后可自动同步本学期课程、考试与成绩'}
           primaryAction={{ label: '立即绑定教务', onPress: goLogin, arrow: true }}
@@ -369,13 +364,10 @@ export default function CourseTablePage() {
         <StateCard
           tone="error"
           icon={<Feather name="alert-circle" size={34} color={C.ink} />}
-          badge={<Bang />}
+          bang
           title="课表加载失败"
           description="可能是教务系统繁忙或网络异常"
-          errorBar={{
-            code: error?.errorCode ?? `HTTP ${error?.code ?? 0}`,
-            message: error?.message ?? '未知错误',
-          }}
+          errorBar={toErrorBar(error)}
           primaryAction={{ label: '重新加载', onPress: onRefresh }}
         />
       )}
@@ -663,11 +655,6 @@ function Sparkle() {
   return <MaterialCommunityIcons name="star-four-points" size={16} color={C.ink} />;
 }
 
-/** 旋转贴纸叹号 */
-function Bang() {
-  return <Text style={styles.bangText}>!</Text>;
-}
-
 /**
  * 课表示意网格。
  *
@@ -710,15 +697,15 @@ function Field({
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <Sticker style={styles.inputBox} fill={C.white} radius={R.btn} offset={0}>
-        <TextInput
+      <StickerField style={styles.inputBox} fill={C.white} radius={R.btn}>
+        <FieldInput
           value={value}
           onChangeText={onChange}
           placeholder={placeholder}
           placeholderTextColor={inkA(0.32)}
           style={styles.input}
         />
-      </Sticker>
+      </StickerField>
     </View>
   );
 }
@@ -993,17 +980,6 @@ const styles = StyleSheet.create({
   },
 
   // ===================== 加载中 =====================
-  loadingWrap: {
-    flexGrow: 1,
-  },
-  loadingCard: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    gap: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexGrow: 1,
-  },
   loadingHint: {
     fontSize: 12,
     lineHeight: 16,
@@ -1013,13 +989,6 @@ const styles = StyleSheet.create({
   },
 
   // ===================== 卡内小件 =====================
-  bangText: {
-    fontFamily: DISPLAY,
-    fontSize: 22,
-    lineHeight: 24,
-    color: C.ink,
-    textAlign: 'center',
-  },
   previewLabel: {
     fontSize: 11,
     lineHeight: 15,

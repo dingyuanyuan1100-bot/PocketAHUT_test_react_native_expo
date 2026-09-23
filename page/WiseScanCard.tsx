@@ -6,7 +6,6 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -14,7 +13,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
 
 import Sticker from '../template/Sticker';
-import { C, DISPLAY, R, SHADOW } from '../template/theme';
+import StickerField, { FieldInput } from '../template/StickerField';
+import { C, DISPLAY, R, SHADOW, inkA } from '../template/theme';
 import { ApiError } from '../api/contracts';
 import type { WiseDeviceInfo } from '../api/contracts/wise';
 
@@ -344,17 +344,24 @@ export default function WiseScanCard({
               </View>
 
               <View style={styles.manualRow}>
-                <TextInput
-                  style={styles.manualInput}
-                  placeholder="或粘贴设备二维码链接"
-                  placeholderTextColor="rgba(17,18,20,0.4)"
-                  value={manual}
-                  onChangeText={setManual}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  editable={!scanning && !ok}
-                />
+                <StickerField
+                  wrapStyle={styles.manualFieldWrap}
+                  style={styles.manualField}
+                  fill={C.cream}
+                  radius={R.pill}
+                >
+                  <FieldInput
+                    style={styles.manualInput}
+                    placeholder="或粘贴设备二维码链接"
+                    placeholderTextColor={inkA(0.4)}
+                    value={manual}
+                    onChangeText={setManual}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    editable={!scanning && !ok}
+                  />
+                </StickerField>
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={() => doScan(manual)}
@@ -650,14 +657,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  // 输入框的描边 / 底色 / 圆角交给 StickerField 的硬投影外壳，
+  // 这里只负责撑开宽度与内部留白，视觉与改造前的裸 TextInput 一致
+  manualFieldWrap: {
+    flex: 1,
+  },
+  manualField: {
+    height: 46,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
   manualInput: {
     flex: 1,
-    height: 46,
-    backgroundColor: C.cream,
-    borderWidth: 2,
-    borderColor: C.ink,
-    borderRadius: R.pill,
-    paddingHorizontal: 16,
     fontSize: 13,
     color: C.ink,
   },

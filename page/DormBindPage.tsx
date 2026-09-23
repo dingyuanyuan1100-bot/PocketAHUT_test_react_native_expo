@@ -6,7 +6,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -17,7 +16,7 @@ import StateCard from '../template/StateCard';
 import StatusPill, { GuestPill } from '../template/StatusPill';
 import Chip from '../template/Chip';
 import Sticker from '../template/Sticker';
-import LoadingCard from '../template/LoadingCard';
+import StickerField, { FieldInput } from '../template/StickerField';
 import { C, DISPLAY, R, SHADOW, inkA } from '../template/theme';
 import { useDormBind, useDormBinding, useDormBuildings } from '../hooks/useElectricity';
 import { useAuth } from '../store/AuthContext';
@@ -167,13 +166,12 @@ export default function DormBindPage() {
         )}
 
         <Text style={styles.fieldLabel}>房间号</Text>
-        <Sticker
+        <StickerField
           style={styles.inputBox}
           fill={roomNo && !roomValid ? C.oat : C.white}
           radius={R.card}
-          offset={0}
         >
-          <TextInput
+          <FieldInput
             value={roomNo}
             onChangeText={(t) => setRoomNo(t.replace(/\D/g, '').slice(0, 3))}
             keyboardType="number-pad"
@@ -183,7 +181,7 @@ export default function DormBindPage() {
             maxLength={3}
           />
           <Text style={styles.inputSuffix}>{roomNo.length}/3</Text>
-        </Sticker>
+        </StickerField>
         {!!roomNo && !roomValid && (
           <Text style={styles.fieldError}>房间号必须是 3 位数字（后端强校验）</Text>
         )}
@@ -229,14 +227,6 @@ function buildingName(
 }
 
 const styles = StyleSheet.create({
-  bang: {
-    fontFamily: DISPLAY,
-    fontSize: 22,
-    lineHeight: 24,
-    color: C.ink,
-    textAlign: 'center',
-  },
-
   currentCard: {
     padding: 16,
     gap: 10,
