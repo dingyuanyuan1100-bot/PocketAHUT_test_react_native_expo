@@ -5,9 +5,10 @@ import { router } from 'expo-router';
 
 import SubPageShell from '../template/SubPageShell';
 import Sticker from '../template/Sticker';
-import StateCard from '../template/StateCard';
+import StateCard, { toErrorBar } from '../template/StateCard';
 import StatusPill, { GuestPill } from '../template/StatusPill';
 import LoadingCard from '../template/LoadingCard';
+import LoadingShell from '../template/LoadingShell';
 import { C, DISPLAY, R, SHADOW, inkA } from '../template/theme';
 import { useDormSign, useDormSignRecords, useDormSignStatus, useDormTask } from '../hooks/useDormSign';
 import type { DormSignRecord } from '../api/contracts/campus';
@@ -40,10 +41,6 @@ function dayKeyOf(dateText: string | undefined | null): string {
   if (!dateText) return '';
   const m = String(dateText).match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   return m ? `${Number(m[1])}-${Number(m[2])}-${Number(m[3])}` : '';
-}
-
-function pad(n: number): string {
-  return n < 10 ? `0${n}` : String(n);
 }
 
 /**
@@ -135,9 +132,9 @@ export default function DormSignPage() {
   if (taskQ.status === 'loading') {
     return (
       <SubPageShell title="宿舍签到" statusPill={<StatusPill label="同步中" />} refreshEnabled={false}>
-        <Sticker style={styles.loadingCard} wrapStyle={styles.loadingWrap} fill={C.white} radius={R.menu} offset={SHADOW.xl}>
+        <LoadingShell>
           <LoadingCard label="正在读取宿舍信息…" />
-        </Sticker>
+        </LoadingShell>
       </SubPageShell>
     );
   }
@@ -151,10 +148,7 @@ export default function DormSignPage() {
           icon={<Feather name="alert-circle" size={34} color={C.ink} />}
           title="宿舍信息加载失败"
           description="可能是晚寝系统繁忙或网络异常"
-          errorBar={{
-            code: taskQ.error?.errorCode ?? `HTTP ${taskQ.error?.code ?? 0}`,
-            message: taskQ.error?.message ?? '未知错误',
-          }}
+          errorBar={toErrorBar(taskQ.error)}
           primaryAction={{ label: '重新加载', onPress: () => void taskQ.refetch() }}
         />
       </SubPageShell>
@@ -321,9 +315,6 @@ function WeekCard({ week }: { week: { label: string; state: DotState; text: stri
 }
 
 const styles = StyleSheet.create({
-  loadingWrap: { flexGrow: 1 },
-  loadingCard: { paddingHorizontal: 20, paddingVertical: 24, flexGrow: 1 },
-
   // 签到大卡
   signCardWrap: {
     marginTop: 8,

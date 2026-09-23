@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import Sticker from './Sticker';
+import usePressFeedback from './motion/usePressFeedback';
+import useExpandPress from './motion/useExpandPress';
 import { C, DISPLAY, FeatherName, inkA, limeA, R, SHADOW } from './theme';
 
 type Props = {
@@ -23,15 +24,35 @@ type Props = {
 /**
  * 通栏大卡片：实心品牌色底（不再用渐变）+ 2px 墨黑描边 + 零模糊硬投影。
  * dark=true 走墨黑底 / 青柠前景，否则走青柠底 / 墨黑前景。
+ *
+ * 点击反馈分两拍：
+ *   1. 按下 → 本体朝硬投影方向平移 offset，把投影盖掉（视觉上「压到桌面上」）
+ *   2. 松手 → 卡片回弹的同时，全屏替身层从卡片位置接力展开成页面
+ *      （见 `template/ExpandOverlay.tsx`）
  */
 export default function HeroCard({ title, sub, icon, badge, dark, route, onPress }: Props) {
   const fg = dark ? C.white : C.ink;
   const subColor = dark ? limeA(0.85) : inkA(0.62);
+  const fill = dark ? C.ink : C.lime;
 
-  const handlePress = onPress ?? (route ? () => router.push(route as never) : undefined);
+  const { progress: press, pressIn, pressOut } = usePressFeedback();
+  const { ref: cardRef, handlePress } = useExpandPress({
+    offset: SHADOW.lg,
+    fill,
+    radius: R.hero,
+    route,
+    onPress,
+  });
 
   const body = (
-    <Sticker fill={dark ? C.ink : C.lime} radius={R.hero} offset={SHADOW.lg} style={styles.heroCard}>
+    <Sticker
+      ref={cardRef}
+      fill={fill}
+      radius={R.hero}
+      offset={SHADOW.lg}
+      pressProgress={press}
+      style={styles.heroCard}
+    >
       <View style={[styles.heroIconBox, { backgroundColor: dark ? C.lime : C.ink }]}>
         <Feather name={icon} size={26} color={dark ? C.ink : C.lime} />
       </View>
@@ -51,7 +72,9 @@ export default function HeroCard({ title, sub, icon, badge, dark, route, onPress
   return (
     <Pressable
       onPress={handlePress}
-      style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}
+      onPressIn={pressIn}
+      onPressOut={pressOut}
+      style={styles.pressable}
     >
       {body}
     </Pressable>
@@ -69,10 +92,6 @@ function Badge({ text, bg, color }: { text: string; bg: string; color: string })
 const styles = StyleSheet.create({
   pressable: {
     alignSelf: 'stretch',
-  },
-  pressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.985 }],
   },
   heroCard: {
     flexDirection: 'row',

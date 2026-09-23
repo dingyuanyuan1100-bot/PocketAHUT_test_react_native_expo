@@ -20,6 +20,13 @@ type Props = {
   icon: ReactNode;
   /** 图标盒右上角的旋转装饰贴纸内容 */
   badge?: ReactNode;
+  /**
+   * 旋转的 `!` 警示贴纸。
+   *
+   * 与 `badge` 二选一（`badge` 优先）。抽出来是因为 5 个页面原先各自
+   * 抄了一遍同样的 `badge={<Text style={styles.bang}>!</Text>}` 加 9 行同样的样式。
+   */
+  bang?: boolean;
   /** 图标盒底色，缺省按 tone 推导 */
   iconBoxFill?: string;
   title: string;
@@ -50,6 +57,7 @@ export default function StateCard({
   tone,
   icon,
   badge,
+  bang,
   iconBoxFill,
   title,
   description,
@@ -61,6 +69,7 @@ export default function StateCard({
 }: Props) {
   // 错误态的图标盒刻意留白底：与青柠的「正常/待引导」形成区分
   const boxFill = iconBoxFill ?? (tone === 'error' ? C.white : C.lime);
+  const badgeNode = badge ?? (bang ? <Text style={styles.bang}>!</Text> : null);
 
   return (
     <Sticker
@@ -78,7 +87,7 @@ export default function StateCard({
           {icon}
         </Sticker>
 
-        {badge ? (
+        {badgeNode ? (
           <Sticker
             style={[styles.badge, { backgroundColor: C.white }]}
             fill={C.white}
@@ -86,7 +95,7 @@ export default function StateCard({
             offset={SHADOW.sm}
             wrapStyle={styles.badgeWrap}
           >
-            {badge}
+            {badgeNode}
           </Sticker>
         ) : (
           <View style={styles.spacer} />
@@ -185,6 +194,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /** `!` 警示贴纸的文字样式（原先 5 个页面各抄一遍） */
+  bang: {
+    fontFamily: DISPLAY,
+    fontSize: 22,
+    lineHeight: 24,
+    color: C.ink,
+    textAlign: 'center',
+  },
   title: {
     fontFamily: DISPLAY,
     fontSize: 20,
@@ -248,6 +265,26 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
 });
+
+/**
+ * 把接口错误转成错误码条的内容。
+ *
+ * 抽出来是因为 6 个页面各写了一遍完全相同的三元表达式 —— 连字号与兜底文案都一样，
+ * 只有错误对象的名字不同：
+ *   code: error?.errorCode ?? `HTTP ${error?.code ?? 0}`,
+ *   message: error?.message ?? '未知错误',
+ *
+ * 参数用结构化类型而不是 `ApiError`，这样各 hook 抛出的错误对象都能直接传进来。
+ */
+export function toErrorBar(
+  err: { errorCode?: string; code?: number; message?: string } | null | undefined,
+  fallbackMessage = '未知错误',
+): { code: string; message: string } {
+  return {
+    code: err?.errorCode ?? `HTTP ${err?.code ?? 0}`,
+    message: err?.message ?? fallbackMessage,
+  };
+}
 
 /** 供外部复用的配色常量（骨架屏、进度条等同源） */
 export const STATE_COLORS = {

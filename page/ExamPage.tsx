@@ -1,13 +1,14 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import SubPageShell from '../template/SubPageShell';
-import StateCard from '../template/StateCard';
+import StateCard, { toErrorBar } from '../template/StateCard';
 import StatusPill, { GuestPill } from '../template/StatusPill';
 import Sticker from '../template/Sticker';
 import LoadingCard from '../template/LoadingCard';
+import LoadingShell from '../template/LoadingShell';
 import { C, DISPLAY, R, SHADOW, inkA } from '../template/theme';
 import { useExam } from '../hooks/useExam';
 import { formatExamDate, groupExamsByDate, parseExamStartTime } from '../lib/exam';
@@ -45,9 +46,9 @@ export default function ExamPage() {
       refreshEnabled={status === 'ready' || status === 'empty'}
     >
       {status === 'loading' && (
-        <Sticker style={styles.loadingCard} wrapStyle={styles.loadingWrap} fill={C.white} radius={R.menu} offset={SHADOW.xl}>
+        <LoadingShell>
           <LoadingCard label="正在同步考试安排…" />
-        </Sticker>
+        </LoadingShell>
       )}
 
       {status === 'guest' && (
@@ -64,7 +65,7 @@ export default function ExamPage() {
         <StateCard
           tone="not_bound"
           icon={<Feather name="clipboard" size={30} color={C.ink} />}
-          badge={<Text style={styles.bang}>!</Text>}
+          bang
           title="绑定教务账号查看考试"
           description={'考试安排由学校教务系统提供\n绑定后可见正考与补考的全部安排'}
           primaryAction={{
@@ -89,13 +90,10 @@ export default function ExamPage() {
         <StateCard
           tone="error"
           icon={<Feather name="alert-circle" size={34} color={C.ink} />}
-          badge={<Text style={styles.bang}>!</Text>}
+          bang
           title="考试安排加载失败"
           description="可能是教务系统繁忙或网络异常"
-          errorBar={{
-            code: error?.errorCode ?? `HTTP ${error?.code ?? 0}`,
-            message: error?.message ?? '未知错误',
-          }}
+          errorBar={toErrorBar(error)}
           primaryAction={{ label: '重新加载', onPress: () => void refetch() }}
         />
       )}
@@ -194,29 +192,6 @@ function ExamRow({ item }: { item: ExamItem }) {
 }
 
 const styles = StyleSheet.create({
-  loadingWrap: {
-    flexGrow: 1,
-  },
-  loadingCard: {
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    flexGrow: 1,
-  },
-  loadingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.gray,
-  },
-  bang: {
-    fontFamily: DISPLAY,
-    fontSize: 22,
-    lineHeight: 24,
-    color: C.ink,
-    textAlign: 'center',
-  },
-
   group: {
     gap: 8,
   },

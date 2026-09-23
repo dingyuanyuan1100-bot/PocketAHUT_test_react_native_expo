@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import PageHeader from '../template/PageHeader';
 import Sticker from '../template/Sticker';
+import StickerField, { FieldInput } from '../template/StickerField';
 import { C, DISPLAY, R, SHADOW, BORDER } from '../template/theme';
 import { useAuth } from '../store/AuthContext';
 import { authApi } from '../api/endpoints/auth';
@@ -387,9 +387,9 @@ function Field({
   autoCapitalize?: any;
 }) {
   return (
-    <Sticker fill={C.oat} radius={R.card} offset={SHADOW.sm} border={BORDER} style={styles.field}>
+    <StickerField fill={C.oat} radius={R.card} border={BORDER} style={styles.field}>
       <Feather name={icon} size={18} color={C.gray} style={styles.fieldIcon} />
-      <TextInput
+      <FieldInput
         style={styles.input}
         placeholder={placeholder}
         placeholderTextColor={C.gray}
@@ -401,7 +401,7 @@ function Field({
         underlineColorAndroid="transparent"
       />
       {right}
-    </Sticker>
+    </StickerField>
   );
 }
 

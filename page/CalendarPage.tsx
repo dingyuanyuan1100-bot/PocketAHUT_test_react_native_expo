@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   },
   eventPlace: {
     fontSize: 11,
-    color: '#6B675F',
+    color: '#3f3b34',
   },
   emptyText: {
     fontSize: 13,

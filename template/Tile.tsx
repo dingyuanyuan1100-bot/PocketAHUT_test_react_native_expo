@@ -1,8 +1,9 @@
-import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import Sticker from './Sticker';
 import StaggerIn from './StaggerIn';
+import usePressFeedback from './motion/usePressFeedback';
+import useExpandPress from './motion/useExpandPress';
 import { C, DISPLAY, FeatherName, inkA, limeA, R, SHADOW } from './theme';
 
 // ===================== Q 版角色贴纸 =====================
@@ -50,7 +51,13 @@ const TONE: Record<TileVariant, { bg: string; fg: string; sub: string }> = {
   cream: { bg: C.white, fg: C.ink, sub: inkA(0.6) },
 };
 
-/** Bento 单格：贴纸（2px 墨黑描边 + 零模糊硬投影） */
+/**
+ * Bento 单格：贴纸（2px 墨黑描边 + 零模糊硬投影）。
+ *
+ * 与 HeroCard 同一套点击反馈：按下时本体朝投影方向平移、把投影盖掉；
+ * 松手时全屏替身层从卡片位置接力展开成页面。
+ * 未配置 route 的瓷片不加任何按压反馈 —— 不给「按了没反应」的错觉。
+ */
 function Tile({
   tile,
   animate,
@@ -61,20 +68,31 @@ function Tile({
   index?: number;
 }) {
   const tone = TONE[tile.variant];
+  const route = tile.route;
+
+  const { progress: press, pressIn, pressOut } = usePressFeedback();
+  const { ref: cardRef, handlePress } = useExpandPress({
+    offset: SHADOW.md,
+    fill: tone.bg,
+    radius: R.card,
+    route,
+  });
+
   return (
     <StaggerIn index={index} active={animate}>
-      <TouchableOpacity
-        activeOpacity={0.8}
-        disabled={!tile.route}
-        onPress={() => {
-          if (tile.route) router.push(tile.route as never);
-        }}
+      <Pressable
+        disabled={!route}
+        onPress={handlePress}
+        onPressIn={route ? pressIn : undefined}
+        onPressOut={route ? pressOut : undefined}
       >
         <Sticker
+          ref={cardRef}
           clip
           fill={tone.bg}
           radius={R.card}
           offset={SHADOW.md}
+          pressProgress={route ? press : undefined}
           style={[styles.tile, { height: tile.height }]}
         >
           <Text style={[styles.tileTitle, { color: tone.fg }]}>{tile.title}</Text>
@@ -88,7 +106,7 @@ function Tile({
             resizeMode="contain"
           />
         </Sticker>
-      </TouchableOpacity>
+      </Pressable>
     </StaggerIn>
   );
 }

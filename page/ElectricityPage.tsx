@@ -13,11 +13,12 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import SubPageShell from '../template/SubPageShell';
-import StateCard from '../template/StateCard';
+import StateCard, { toErrorBar } from '../template/StateCard';
 import StatusPill, { GuestPill } from '../template/StatusPill';
 import Chip from '../template/Chip';
 import Sticker from '../template/Sticker';
 import LoadingCard from '../template/LoadingCard';
+import LoadingShell from '../template/LoadingShell';
 import { C, DISPLAY, R, SHADOW, inkA } from '../template/theme';
 import {
   useChargeOrderStatus,
@@ -91,9 +92,9 @@ export default function ElectricityPage() {
       refreshEnabled={status === 'ready' || status === 'error'}
     >
       {status === 'loading' && (
-        <Sticker style={styles.loadingCard} wrapStyle={styles.loadingWrap} fill={C.white} radius={R.menu} offset={SHADOW.xl}>
+        <LoadingShell>
           <LoadingCard label="正在查询电费余额…" />
-        </Sticker>
+        </LoadingShell>
       )}
 
       {status === 'guest' && (
@@ -114,7 +115,7 @@ export default function ElectricityPage() {
         <StateCard
           tone="not_bound"
           icon={<Feather name="home" size={30} color={C.ink} />}
-          badge={<Text style={styles.bang}>!</Text>}
+          bang
           title="先绑定宿舍房间"
           description={
             balanceQ.error?.message ??
@@ -132,13 +133,10 @@ export default function ElectricityPage() {
         <StateCard
           tone="error"
           icon={<Feather name="alert-circle" size={34} color={C.ink} />}
-          badge={<Text style={styles.bang}>!</Text>}
+          bang
           title="电费查询失败"
           description="可能是缴费平台繁忙或网络异常"
-          errorBar={{
-            code: balanceQ.error?.errorCode ?? `HTTP ${balanceQ.error?.code ?? 0}`,
-            message: balanceQ.error?.message ?? '未知错误',
-          }}
+          errorBar={toErrorBar(balanceQ.error)}
           primaryAction={{ label: '重新查询', onPress: () => void balanceQ.refetch() }}
         />
       )}
@@ -386,29 +384,6 @@ function OrderRow({ label, value, strong }: { label: string; value: string; stro
 }
 
 const styles = StyleSheet.create({
-  loadingWrap: {
-    flexGrow: 1,
-  },
-  loadingCard: {
-    paddingVertical: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    flexGrow: 1,
-  },
-  loadingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: C.gray,
-  },
-  bang: {
-    fontFamily: DISPLAY,
-    fontSize: 22,
-    lineHeight: 24,
-    color: C.ink,
-    textAlign: 'center',
-  },
-
   roomRow: {
     flexDirection: 'row',
     alignItems: 'center',

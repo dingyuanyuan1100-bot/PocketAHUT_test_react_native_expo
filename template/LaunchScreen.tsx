@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { C, DISPLAY, inkA } from './theme';
 
 type Props = {
@@ -26,8 +26,6 @@ const EXPO_OUT = Easing.bezier(0.16, 1, 0.3, 1);
  * 全流程走 RN Animated，Expo Go 里可直接看到。
  */
 export default function LaunchScreen({ onReveal, onFinish }: Props) {
-  // 显式绑定窗口尺寸，避免父容器高度异常时（如 Web 下页面纵向溢出）整组元素被推到视口外
-  const { width: winW, height: winH } = useWindowDimensions();
   const seal = useRef(new Animated.Value(0)).current;   // 青柠印章
   const plate = useRef(new Animated.Value(0)).current;  // 白色贴纸底板
   const logo = useRef(new Animated.Value(0)).current;   // 校徽
@@ -117,7 +115,6 @@ export default function LaunchScreen({ onReveal, onFinish }: Props) {
     <Animated.View
       style={[
         styles.root,
-        { width: winW, height: winH },
         { opacity: exitOpacity, transform: [{ translateY: exitY }, { scale: exitScale }] },
       ]}
       pointerEvents="none"
@@ -170,10 +167,18 @@ const SEAL = 232;
 const PLATE = 198;
 
 const styles = StyleSheet.create({
+  /**
+   * 铺满父容器，而不是按 useWindowDimensions 的宽高定尺寸。
+   * 原生端 edge-to-edge 下，useWindowDimensions().height 拿到的是「屏幕减去系统栏」的高度
+   * （实测比真实根视图矮一截，约 65dp），照它设高会让启动页底部漏出、露出底部导航栏。
+   * 用 absoluteFill 后，启动页与底部导航栏位于同一父容器内，覆盖关系由结构保证，与系统栏无关。
+   */
   root: {
     position: 'absolute',
     top: 0,
     left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: C.cream,
     alignItems: 'center',
     justifyContent: 'center',
