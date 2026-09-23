@@ -1,9 +1,9 @@
 import { Image, ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import Sticker from './Sticker';
 import StaggerIn from './StaggerIn';
 import usePressFeedback from './motion/usePressFeedback';
-import useExpandPress from './motion/useExpandPress';
 import { C, DISPLAY, FeatherName, inkA, limeA, R, SHADOW } from './theme';
 
 // ===================== Q 版角色贴纸 =====================
@@ -54,8 +54,8 @@ const TONE: Record<TileVariant, { bg: string; fg: string; sub: string }> = {
 /**
  * Bento 单格：贴纸（2px 墨黑描边 + 零模糊硬投影）。
  *
- * 与 HeroCard 同一套点击反馈：按下时本体朝投影方向平移、把投影盖掉；
- * 松手时全屏替身层从卡片位置接力展开成页面。
+ * 与 HeroCard 同一套交互：按下时本体朝投影方向平移、把投影盖掉；
+ * 松手时 `router.push(route)`，下一页由 Stack 从右侧滑入。
  * 未配置 route 的瓷片不加任何按压反馈 —— 不给「按了没反应」的错觉。
  */
 function Tile({
@@ -69,14 +69,8 @@ function Tile({
 }) {
   const tone = TONE[tile.variant];
   const route = tile.route;
-
   const { progress: press, pressIn, pressOut } = usePressFeedback();
-  const { ref: cardRef, handlePress } = useExpandPress({
-    offset: SHADOW.md,
-    fill: tone.bg,
-    radius: R.card,
-    route,
-  });
+  const handlePress = route ? () => router.push(route as never) : undefined;
 
   return (
     <StaggerIn index={index} active={animate}>
@@ -87,7 +81,6 @@ function Tile({
         onPressOut={route ? pressOut : undefined}
       >
         <Sticker
-          ref={cardRef}
           clip
           fill={tone.bg}
           radius={R.card}
@@ -95,16 +88,22 @@ function Tile({
           pressProgress={route ? press : undefined}
           style={[styles.tile, { height: tile.height }]}
         >
-          <Text style={[styles.tileTitle, { color: tone.fg }]}>{tile.title}</Text>
-          <Text style={[styles.tileSub, { color: tone.sub }]}>{tile.sub}</Text>
-          <View style={[styles.tileIcon, { transform: [{ rotate: tile.iconRotate }] }]}>
-            <Feather name={tile.icon} size={22} color={tone.fg} />
+          {/*
+            内边距在 tileInner 上而不是瓷片本体：小人贴纸是 absolute 定位的，
+            它认的是**最近的这层容器**，padding 若留在外面会让贴纸整体错位 12px。
+          */}
+          <View style={styles.tileInner}>
+            <Text style={[styles.tileTitle, { color: tone.fg }]}>{tile.title}</Text>
+            <Text style={[styles.tileSub, { color: tone.sub }]}>{tile.sub}</Text>
+            <View style={[styles.tileIcon, { transform: [{ rotate: tile.iconRotate }] }]}>
+              <Feather name={tile.icon} size={22} color={tone.fg} />
+            </View>
+            <Image
+              source={tile.chibi}
+              style={[styles.tileChibi, { top: tile.height === 92 ? 26 : 14, transform: [{ rotate: tile.chibiRotate }] }]}
+              resizeMode="contain"
+            />
           </View>
-          <Image
-            source={tile.chibi}
-            style={[styles.tileChibi, { top: tile.height === 92 ? 26 : 14, transform: [{ rotate: tile.chibiRotate }] }]}
-            resizeMode="contain"
-          />
         </Sticker>
       </Pressable>
     </StaggerIn>
@@ -138,6 +137,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tile: {
+    // 内边距在 tileInner 上（见那里的注释：小人贴纸的定位基准）
+  },
+  tileInner: {
+    flex: 1,
     padding: 12,
   },
   tileTitle: {

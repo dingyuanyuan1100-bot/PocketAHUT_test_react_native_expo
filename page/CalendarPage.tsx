@@ -484,11 +484,11 @@ const styles = StyleSheet.create({
   },
   eventPlace: {
     fontSize: 11,
-    color: '#3f3b34',
+    color: '#5c5850',
   },
   emptyText: {
     fontSize: 13,
-    color: '#6B675F',
+    color: '#030303',
     paddingVertical: 8,
   },
 

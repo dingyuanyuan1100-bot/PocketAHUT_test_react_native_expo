@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Sticker from '../template/Sticker';
@@ -7,6 +7,21 @@ import { BORDER, C, DISPLAY, FeatherName, inkA, R, SHADOW } from '../template/th
 
 /** 未选中分类的图标/文字色（对位设计稿的墨黑 45%） */
 const MUTED = '#8E8B84';
+
+/**
+ * 导轨项尺寸。滑块按同一套数字定位，改这里就等于同时改了项与滑块。
+ * `PITCH` 是相邻两项原点的距离（项高 + 间隙），滑块位移按它成倍走。
+ */
+const RAIL_ITEM_W = 84;
+const RAIL_ITEM_H = 72;
+const RAIL_GAP = 10;
+const RAIL_PITCH = RAIL_ITEM_H + RAIL_GAP; // 82
+
+/** 滑块滑动时长与曲线（对位参考动效的 0.4s cubic-bezier(0.5, 1.6, 0.4, 1)：末段回弹过冲） */
+const GLIDE_MS = 400;
+const GLIDE_EASING = Easing.bezier(0.5, 1.6, 0.4, 1);
+/** 滑块底色交叉淡入的平台宽度：小过冲不改变透明度 */
+const GLIDE_PLATEAU = 0.35;
 
 // ===================== 分类导轨 =====================
 type Tone = 'lime' | 'ink' | 'oat';
@@ -76,6 +91,28 @@ const BASES: { bg: string; fg: string }[] = [
 export default function ServicePage() {
   const [cat, setCat] = useState('study');
   const list = SERVICES[cat] ?? [];
+  const catIndex = Math.max(0, CATS.findIndex((c) => c.key === cat));
+
+  /*
+    滑块位置用**浮点索引**表示（0 → 1 → 2），一个 Animated.Value 同时驱动
+    位移与底色交叉淡入 —— 只动 transform / opacity，可开 native driver，
+    整个切换过程零 React 重渲染、零布局重排（同首页胶囊与课程表遮罩的思路）。
+  */
+  const glide = useRef(new Animated.Value(catIndex)).current;
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      // 首次渲染直接就位，不播动画（否则一进页面滑块会从第 1 项飞过来）
+      isFirstRender.current = false;
+      return;
+    }
+    Animated.timing(glide, {
+      toValue: catIndex,
+      duration: GLIDE_MS,
+      easing: GLIDE_EASING,
+      useNativeDriver: true,
+    }).start();
+  }, [catIndex, glide]);
 
   return (
     <View style={styles.page}>
@@ -95,16 +132,56 @@ export default function ServicePage() {
       <View style={styles.body}>
         {/* 分类导轨 */}
         <View style={styles.rail}>
+          {/*
+            滑块层：绝对定位铺满导轨，`pointerEvents="none"` 不参与点击。
+            三个 tone 各一个滑块，位移**完全相同**（同一个 glide 驱动）、只有
+            opacity 不同 —— 于是「换色」表现为交叉淡入，而不是三个色块各滑各的。
+          */}
+          <View style={styles.gliderLayer} pointerEvents="none">
+            {CATS.map((c, i) => (
+              <Animated.View
+                key={c.key}
+                style={[
+                  styles.glider,
+                  {
+                    // 平台区内恒为 1：bezier 的末段过冲不会把滑块淡一下再回来
+                    opacity: glide.interpolate({
+                      inputRange: [i - 1, i - GLIDE_PLATEAU, i + GLIDE_PLATEAU, i + 1],
+                      outputRange: [0, 1, 1, 0],
+                      extrapolate: 'clamp',
+                    }),
+                    transform: [
+                      {
+                        translateY: glide.interpolate({
+                          inputRange: [0, 1, 2],
+                          outputRange: [0, RAIL_PITCH, RAIL_PITCH * 2],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                {/* 硬投影底板：与本体同尺寸、整体平移 (offset, offset)（见 template/Sticker.tsx） */}
+                <View style={styles.gliderSlab} />
+                <View style={[styles.gliderBody, { backgroundColor: RAIL_TONE[c.tone].fill }]} />
+              </Animated.View>
+            ))}
+          </View>
+
           {CATS.map((c) => {
             const on = c.key === cat;
             const tone = RAIL_TONE[c.tone];
             return (
               <TouchableOpacity key={c.key} activeOpacity={0.8} onPress={() => setCat(c.key)}>
+                {/*
+                  项本身不再画底色 —— 底色由会滑动的 glider 提供。
+                  否则选中项会原地多出一块实心底色，滑块就白滑了。
+                */}
                 <Sticker
                   style={styles.railItem}
-                  fill={on ? tone.fill : 'transparent'}
-                  border={on ? BORDER : 0}
-                  offset={on ? SHADOW.sm : 0}
+                  fill="transparent"
+                  border={0}
+                  offset={0}
                   radius={R.card}
                 >
                   <Feather name={c.icon} size={18} color={on ? tone.fg : MUTED} />
@@ -200,12 +277,49 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   rail: {
-    width: 84,
-    gap: 10,
+    width: RAIL_ITEM_W,
+    gap: RAIL_GAP,
+  },
+  /** 滑块层：绝对铺满导轨，位于所有选项之下（不参与布局） */
+  gliderLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  /** 单个滑块：只负责定位与动画，视觉交给 slab + body 两层 */
+  glider: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: RAIL_ITEM_W,
+    height: RAIL_ITEM_H,
+  },
+  /** 硬投影底板：与本体同尺寸，整体平移 (SHADOW.sm, SHADOW.sm) */
+  gliderSlab: {
+    position: 'absolute',
+    left: SHADOW.sm,
+    top: SHADOW.sm,
+    right: -SHADOW.sm,
+    bottom: -SHADOW.sm,
+    borderRadius: R.card,
+    backgroundColor: C.ink,
+  },
+  /** 本体：底色由 Animated 按 tone 交叉淡入注入，这里只留 2px 墨黑描边 */
+  gliderBody: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: R.card,
+    borderWidth: BORDER,
+    borderColor: C.ink,
   },
   railItem: {
-    width: 84,
-    height: 72,
+    width: RAIL_ITEM_W,
+    height: RAIL_ITEM_H,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
