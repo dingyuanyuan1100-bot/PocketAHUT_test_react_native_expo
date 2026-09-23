@@ -3,6 +3,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import PageHeader from '../template/PageHeader';
+import RevealGroup from '../template/RevealGroup';
 import Sticker from '../template/Sticker';
 import BottomDrawer from '../template/motion/BottomDrawer';
 import { C, DISPLAY, inkA, R, SHADOW } from '../template/theme';
@@ -199,106 +200,108 @@ export default function CalendarPage() {
             backLeft
           />
 
-          {/* ===================== 月份条 ===================== */}
-          <View style={styles.monthBar}>
-            <Text style={styles.monthTitle}>{viewMonth}月</Text>
-            <TouchableOpacity activeOpacity={0.8} style={styles.filterBtn} onPress={openPicker}>
-              <Feather name="sliders" size={16} color={C.ink} />
-            </TouchableOpacity>
-          </View>
-
-          {/* ===================== 月历卡 ===================== */}
-          <View style={styles.calendarCard}>
-            <View style={styles.weekRow}>
-              {WEEK_HEAD.map((h) => (
-                <Text key={h} style={styles.weekCell}>
-                  {h}
-                </Text>
-              ))}
-            </View>
-
-            {weeks.map((week, wi) => (
-              <View key={wi} style={styles.weekRow}>
-                {week.map((cell, ci) => {
-                  const cellKey = `${cell.year}-${cell.month}-${cell.day}`;
-                  const isSel = !cell.muted && selectedKey === `${viewYear}-${viewMonth}-${cell.day}`;
-                  const label = cell.muted ? null : (labelsByDate.get(cellKey)?.join(' / ') ?? null);
-                  const bg = cell.muted ? C.cream : isSel ? C.lime : C.white;
-                  const fg = cell.muted ? inkA(0.35) : C.ink;
-                  const bordered = !cell.muted && isSel;
-                  return (
-                    <View key={ci} style={styles.dayCell}>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        disabled={cell.muted}
-                        onPress={() => !cell.muted && setSelectedKey(`${viewYear}-${viewMonth}-${cell.day}`)}
-                        style={[
-                          styles.dayBox,
-                          { backgroundColor: bg, borderColor: C.ink, borderWidth: bordered ? 2 : 0 },
-                        ]}
-                      >
-                        <Text style={[styles.dayText, { color: fg }]}>{cell.day}</Text>
-                        {label && (
-                          <Text style={[styles.dayLabel, { color: cell.muted ? inkA(0.35) : inkA(0.7) }]}>
-                            {label}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
-              </View>
-            ))}
-
-            <View style={styles.legend}>
-              {LEGEND.map((l) => (
-                <View key={l.label} style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      {
-                        backgroundColor: l.color,
-                        borderColor: l.color === C.cream ? inkA(0.35) : C.ink,
-                        borderWidth: l.color === C.cream ? 1 : 0,
-                      },
-                    ]}
-                  />
-                  <Text style={styles.legendLabel}>{l.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* ===================== 当日日程卡 ===================== */}
-          <View style={styles.detailCard}>
-            <View style={styles.detailHeader}>
-              <Text style={styles.detailDate}>{detailText}</Text>
-              <TouchableOpacity activeOpacity={0.8} style={styles.addBtn}>
-                <Feather name="plus" size={16} color={C.ink} />
+          <RevealGroup>
+            {/* ===================== 月份条 ===================== */}
+            <View style={styles.monthBar}>
+              <Text style={styles.monthTitle}>{viewMonth}月</Text>
+              <TouchableOpacity activeOpacity={0.8} style={styles.filterBtn} onPress={openPicker}>
+                <Feather name="sliders" size={16} color={C.ink} />
               </TouchableOpacity>
             </View>
 
-            {selectedEvents.length > 0 ? (
-              <View style={styles.eventList}>
-                {selectedEvents.map((ev) => (
-                  <View key={ev.id} style={styles.eventRow}>
-                    <View style={styles.timeCol}>
-                      <Text style={styles.eventTime}>{ev.start_date.slice(5)}</Text>
-                      <View style={[styles.eventDot, { backgroundColor: C.lime }]} />
-                    </View>
-                    <View style={styles.eventCard}>
-                      <Text style={styles.eventTitle}>{ev.title}</Text>
-                      <Text style={styles.eventPlace}>{`${ev.start_date} 至 ${ev.end_date}`}</Text>
-                    </View>
+            {/* ===================== 月历卡 ===================== */}
+            <View style={styles.calendarCard}>
+              <View style={styles.weekRow}>
+                {WEEK_HEAD.map((h) => (
+                  <Text key={h} style={styles.weekCell}>
+                    {h}
+                  </Text>
+                ))}
+              </View>
+
+              {weeks.map((week, wi) => (
+                <View key={wi} style={styles.weekRow}>
+                  {week.map((cell, ci) => {
+                    const cellKey = `${cell.year}-${cell.month}-${cell.day}`;
+                    const isSel = !cell.muted && selectedKey === `${viewYear}-${viewMonth}-${cell.day}`;
+                    const label = cell.muted ? null : (labelsByDate.get(cellKey)?.join(' / ') ?? null);
+                    const bg = cell.muted ? C.cream : isSel ? C.lime : C.white;
+                    const fg = cell.muted ? inkA(0.35) : C.ink;
+                    const bordered = !cell.muted && isSel;
+                    return (
+                      <View key={ci} style={styles.dayCell}>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          disabled={cell.muted}
+                          onPress={() => !cell.muted && setSelectedKey(`${viewYear}-${viewMonth}-${cell.day}`)}
+                          style={[
+                            styles.dayBox,
+                            { backgroundColor: bg, borderColor: C.ink, borderWidth: bordered ? 2 : 0 },
+                          ]}
+                        >
+                          <Text style={[styles.dayText, { color: fg }]}>{cell.day}</Text>
+                          {label && (
+                            <Text style={[styles.dayLabel, { color: cell.muted ? inkA(0.35) : inkA(0.7) }]}>
+                              {label}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
+
+              <View style={styles.legend}>
+                {LEGEND.map((l) => (
+                  <View key={l.label} style={styles.legendItem}>
+                    <View
+                      style={[
+                        styles.legendDot,
+                        {
+                          backgroundColor: l.color,
+                          borderColor: l.color === C.cream ? inkA(0.35) : C.ink,
+                          borderWidth: l.color === C.cream ? 1 : 0,
+                        },
+                      ]}
+                    />
+                    <Text style={styles.legendLabel}>{l.label}</Text>
                   </View>
                 ))}
               </View>
-            ) : (
-              <Text style={styles.emptyText}>
-                {isLoading ? '校历加载中…' : '当日暂无校历安排'}
-              </Text>
-            )}
-          </View>
+            </View>
+
+            {/* ===================== 当日日程卡 ===================== */}
+            <View style={styles.detailCard}>
+              <View style={styles.detailHeader}>
+                <Text style={styles.detailDate}>{detailText}</Text>
+                <TouchableOpacity activeOpacity={0.8} style={styles.addBtn}>
+                  <Feather name="plus" size={16} color={C.ink} />
+                </TouchableOpacity>
+              </View>
+
+              {selectedEvents.length > 0 ? (
+                <View style={styles.eventList}>
+                  {selectedEvents.map((ev) => (
+                    <View key={ev.id} style={styles.eventRow}>
+                      <View style={styles.timeCol}>
+                        <Text style={styles.eventTime}>{ev.start_date.slice(5)}</Text>
+                        <View style={[styles.eventDot, { backgroundColor: C.lime }]} />
+                      </View>
+                      <View style={styles.eventCard}>
+                        <Text style={styles.eventTitle}>{ev.title}</Text>
+                        <Text style={styles.eventPlace}>{`${ev.start_date} 至 ${ev.end_date}`}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptyText}>
+                  {isLoading ? '校历加载中…' : '当日暂无校历安排'}
+                </Text>
+              )}
+            </View>
+          </RevealGroup>
         </Sticker>
       </ScrollView>
 

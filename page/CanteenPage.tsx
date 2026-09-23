@@ -8,6 +8,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 
+import RevealGroup from '../template/RevealGroup';
 import SubPageShell from '../template/SubPageShell';
 import Chip from '../template/Chip';
 import LoadingCard from '../template/LoadingCard';
@@ -137,13 +138,15 @@ export default function CanteenPage() {
   } else {
     body = (
       <View style={styles.list}>
-        <View style={styles.countRow}>
-          <Text style={styles.countText}>共 {total} 道菜</Text>
-          <Text style={styles.countHint}>点击上方分类可筛选</Text>
-        </View>
-        {dishes.map((d) => (
-          <DishCard key={d.id} dish={d} />
-        ))}
+        <RevealGroup>
+          <View style={styles.countRow}>
+            <Text style={styles.countText}>共 {total} 道菜</Text>
+            <Text style={styles.countHint}>点击上方分类可筛选</Text>
+          </View>
+          {dishes.map((d) => (
+            <DishCard key={d.id} dish={d} />
+          ))}
+        </RevealGroup>
       </View>
     );
   }
@@ -152,10 +155,12 @@ export default function CanteenPage() {
   const commentsBlock =
     !dishesQ.isLoading && !dishesQ.isError && comments.length > 0 ? (
       <View style={styles.list}>
-        <Text style={styles.sectionTitle}>同学们怎么说</Text>
-        {comments.slice(0, 5).map((c) => (
-          <CommentCard key={c.id} comment={c} />
-        ))}
+        <RevealGroup>
+          <Text style={styles.sectionTitle}>同学们怎么说</Text>
+          {comments.slice(0, 5).map((c) => (
+            <CommentCard key={c.id} comment={c} />
+          ))}
+        </RevealGroup>
       </View>
     ) : null;
 

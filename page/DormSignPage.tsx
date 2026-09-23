@@ -3,6 +3,7 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import RevealGroup from '../template/RevealGroup';
 import SubPageShell from '../template/SubPageShell';
 import Sticker from '../template/Sticker';
 import StateCard, { toErrorBar } from '../template/StateCard';
@@ -183,15 +184,17 @@ export default function DormSignPage() {
       }}
       refreshing={taskQ.isRefreshing || statusQ.isRefreshing || recordsQ.isRefreshing}
     >
-      <SignCard
-        dormName={task?.dormName || task?.dormNo || '—'}
-        roomNo={task?.roomNo || '—'}
-        statusText={todayName || '未签到'}
-        signed={signedToday}
-        pending={signMutation.isPending}
-        onSign={onSign}
-      />
-      <WeekCard week={week} />
+      <RevealGroup>
+        <SignCard
+          dormName={task?.dormName || task?.dormNo || '—'}
+          roomNo={task?.roomNo || '—'}
+          statusText={todayName || '未签到'}
+          signed={signedToday}
+          pending={signMutation.isPending}
+          onSign={onSign}
+        />
+        <WeekCard week={week} />
+      </RevealGroup>
     </SubPageShell>
   );
 }
