@@ -1,4 +1,5 @@
 import { http } from '../client';
+import { encryptPayload, removeSysCred, saveSysCred } from '../../lib/creds';
 import type {
   BindEmailRequest,
   BindRequest,
@@ -56,6 +57,12 @@ export const authApi = {
   wechatLogin: (code: string) =>
     http.post<LoginResponse>('/user/wechat/login', { code } as WeChatLoginRequest),
 
+  // 微信绑定（App 侧拿到微信 code 后绑定到当前账号，跳过设备凭证头）
+  wechatBind: (code: string) =>
+    http.post<unknown>('/user/wechat/bind', { code } as WeChatLoginRequest, {
+      skipSystemCreds: true,
+    }),
+
   // 注册用：向邮箱发验证码（公开，严格限流）
   sendRegisterCode: (email: string) =>
     http.post<unknown>('/auth/email-verification-codes', { email } as SendEmailCodeRequest),
@@ -85,10 +92,32 @@ export const authApi = {
   updateGradeTask: (body: GradeTaskConfig) => http.put<unknown>('/user/tasks/grade', body),
 
   // —— 系统绑定（均需鉴权）——
-  bindSys: (body: BindRequest) => http.post<unknown>('/user/sys/bind', body),
+  /**
+   * 绑定子系统账号。
+   * ⚠️ 后端要求 {sys_code, payload}：payload 是 {account, password} 的 RSA-OAEP 密文
+   * （官方客户端同款，公钥见 lib/creds.ts）。绑定成功后把加密凭证存本地，
+   * 供后续请求编码进 X-System-Creds 头。
+   */
+  bindSys: async (body: BindRequest) => {
+    const payload = await encryptPayload(
+      JSON.stringify({ account: body.account, password: body.password }),
+    );
+    const result = await http.post<unknown>('/user/sys/bind', {
+      sys_code: body.sys_code,
+      payload,
+    });
+    await saveSysCred(body.sys_code, body.account, body.password);
+    return result;
+  },
   listSysBinds: () => http.get<SysUserVO[]>('/user/sys/list'),
-  unbindSys: (sysCode: string) =>
-    http.post<unknown>('/user/sys/unbind', { sys_code: sysCode } as UnbindRequest),
+  unbindSys: async (sysCode: string) => {
+    const result = await http.post<unknown>(
+      '/user/sys/unbind',
+      { sys_code: sysCode } as UnbindRequest,
+    );
+    await removeSysCred(sysCode);
+    return result;
+  },
   toggleVpn: (enabled: boolean) =>
     http.put<{ vpn_enabled: boolean }>('/user/sys/vpn', { enabled } as VpnToggleRequest),
 };

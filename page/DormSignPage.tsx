@@ -1,8 +1,9 @@
-import { useMemo } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import CommitButton, { type CommitStatus } from '../template/CommitButton';
 import RevealGroup from '../template/RevealGroup';
 import SubPageShell from '../template/SubPageShell';
 import Sticker from '../template/Sticker';
@@ -62,6 +63,9 @@ export default function DormSignPage() {
   const task = taskQ.task;
   const todayName = statusQ.signStatus?.signStatusName ?? '';
   const signedToday = isSignedText(todayName);
+  // 签到按钮的三态：已签（来自服务端）直接锁定 success，其余交给本地提交状态
+  const [localStatus, setLocalStatus] = useState<CommitStatus>('idle');
+  const signStatus: CommitStatus = signedToday ? 'success' : localStatus;
 
   /**
    * 近 7 日点阵：以**今天**为锚点回推 6 天，逐日去记录里找。
@@ -158,8 +162,10 @@ export default function DormSignPage() {
 
   const onSign = () => {
     if (signedToday || signMutation.isPending) return;
+    setLocalStatus('submitting');
     signMutation.mutate(undefined, {
       onSuccess: (msg) => {
+        setLocalStatus('success');
         // 后端把上游的 msg 透出来（如「签到成功」）；为空时给个中性兜底
         Alert.alert('签到成功', typeof msg === 'string' && msg ? msg : '已完成今日晚寝签到');
       },
@@ -168,6 +174,8 @@ export default function DormSignPage() {
           typeof err === 'object' && err && 'message' in err
             ? String((err as { message?: string }).message ?? '')
             : '';
+        setLocalStatus('error');
+        setTimeout(() => setLocalStatus('idle'), 600);
         Alert.alert('签到失败', message || '晚寝系统未返回结果，请稍后重试。');
       },
     });
@@ -190,7 +198,7 @@ export default function DormSignPage() {
           roomNo={task?.roomNo || '—'}
           statusText={todayName || '未签到'}
           signed={signedToday}
-          pending={signMutation.isPending}
+          status={signStatus}
           onSign={onSign}
         />
         <WeekCard week={week} />
@@ -206,14 +214,14 @@ function SignCard({
   roomNo,
   statusText,
   signed,
-  pending,
+  status,
   onSign,
 }: {
   dormName: string;
   roomNo: string;
   statusText: string;
   signed: boolean;
-  pending: boolean;
+  status: CommitStatus;
   onSign: () => void;
 }) {
   return (
@@ -261,23 +269,15 @@ function SignCard({
         <Text style={styles.rangeText}>请在学校核验范围内签到</Text>
       </View>
 
-      <TouchableOpacity
-        activeOpacity={0.85}
+      <CommitButton
+        label="立即签到"
+        successLabel="今日已签到"
+        fill={C.lime}
+        fg={C.ink}
+        status={status}
         onPress={onSign}
-        disabled={signed || pending}
         style={styles.ctaWrap}
-      >
-        <Sticker
-          fill={signed ? C.oat : C.lime}
-          radius={R.pill}
-          offset={0}
-          style={styles.cta}
-        >
-          <Text style={[styles.ctaText, signed && styles.ctaTextDone]}>
-            {pending ? '签到中…' : signed ? '今日已签到' : '立即签到'}
-          </Text>
-        </Sticker>
-      </TouchableOpacity>
+      />
     </Sticker>
   );
 }
@@ -391,19 +391,6 @@ const styles = StyleSheet.create({
   ctaWrap: {
     alignSelf: 'stretch',
     marginTop: 14,
-  },
-  cta: {
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: {
-    fontFamily: DISPLAY,
-    fontSize: 18,
-    color: C.ink,
-  },
-  ctaTextDone: {
-    color: inkA(0.55),
   },
 
   // 最近 7 天

@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import CollapseReveal from '../template/motion/CollapseReveal';
+import CommitButton, { type CommitStatus } from '../template/CommitButton';
 import PageHeader from '../template/PageHeader';
 import Sticker from '../template/Sticker';
 import StickerField, { FieldInput } from '../template/StickerField';
@@ -22,6 +24,7 @@ import { useAuth } from '../store/AuthContext';
 import { authApi } from '../api/endpoints/auth';
 import { SYS_META } from '../api/contracts/auth';
 import type { SysCode, SysUserVO } from '../api/contracts/auth';
+import { courseKeys } from '../hooks/useCourseSchedule';
 
 type Mode = 'login' | 'register';
 
@@ -29,6 +32,7 @@ const SYS_ORDER: SysCode[] = ['jwxt', 'dorm', 'chaoxing', 'vpncas'];
 
 export default function LoginBindPage() {
   const { user, isAuthed, login, register } = useAuth();
+  const qc = useQueryClient();
 
   // ============ 账号视图状态 ============
   const [mode, setMode] = useState<Mode>('login');
@@ -38,7 +42,8 @@ export default function LoginBindPage() {
   const [code, setCode] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [commitStatus, setCommitStatus] = useState<CommitStatus>('idle');
+  const [bindDone, setBindDone] = useState<Set<SysCode>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   // 验证码倒计时（注册 / 找回密码共用一个发送入口，按当前面板判断）
@@ -74,7 +79,7 @@ export default function LoginBindPage() {
 
   const onSubmit = useCallback(async () => {
     setError(null);
-    setLoading(true);
+    setCommitStatus('submitting');
     try {
       if (mode === 'login') {
         await login(username.trim(), password);
@@ -86,31 +91,35 @@ export default function LoginBindPage() {
           verify_code: code.trim(),
         });
       }
-      // 登录/注册成功：回到上一页（如「我的」），由 useAuth 驱动重渲染
-      router.back();
+      // 成功：先让按钮播「展开回胶囊 + 对勾」成功态，再返回上一页
+      setCommitStatus('success');
+      setTimeout(() => router.back(), 850);
     } catch (e) {
       setError((e as Error).message || '操作失败');
-    } finally {
-      setLoading(false);
+      setCommitStatus('error');
+      setTimeout(() => setCommitStatus('idle'), 600);
     }
   }, [mode, username, password, email, code, login, register]);
 
   const onForgot = useCallback(async () => {
     setError(null);
-    setLoading(true);
+    setCommitStatus('submitting');
     try {
       await authApi.resetPassword({
         email: email.trim(),
         verify_code: code.trim(),
         new_password: password,
       });
-      Alert.alert('成功', '密码已重置，请用新密码登录');
-      setForgotOpen(false);
-      setMode('login');
+      setCommitStatus('success');
+      setTimeout(() => {
+        setForgotOpen(false);
+        setMode('login');
+        setCommitStatus('idle');
+      }, 950);
     } catch (e) {
       setError((e as Error).message || '重置失败');
-    } finally {
-      setLoading(false);
+      setCommitStatus('error');
+      setTimeout(() => setCommitStatus('idle'), 600);
     }
   }, [email, code, password]);
 
@@ -132,6 +141,20 @@ export default function LoginBindPage() {
     }
   }, []);
 
+  /**
+   * 绑定 / 解绑教务后，必须把依赖教务绑定态的查询缓存全部作废。
+   *
+   * 这是「解绑后重新登录课程表仍显示已绑定」的根因：解绑走的是后端硬删除，
+   * DB 里记录确实没了，但课程表 hook（`/jwxt/course`，queryKey `['jwxt','course']`）
+   * 有 5 分钟 staleTime —— 重新进页面时命中旧缓存，直接渲染出解绑前的课程与「已同步」。
+   *
+   * `removeQueries` 而非 `invalidateQueries`：解绑后应回到 not_bound 空态，
+   * 而不是拿旧数据先渲染一帧再刷新（那会闪一下旧课表）。
+   */
+  const invalidateJwxt = useCallback(() => {
+    void qc.removeQueries({ queryKey: courseKeys.all });
+  }, [qc]);
+
   useEffect(() => {
     if (isAuthed) loadBinds();
   }, [isAuthed, loadBinds]);
@@ -142,24 +165,31 @@ export default function LoginBindPage() {
     setBindBusy(sys);
     try {
       await authApi.bindSys({ account: f.account, password: f.password, sys_code: sys });
-      Alert.alert('已绑定', `${SYS_META[sys].name} 绑定成功`);
-      setOpenSys(null);
-      await loadBinds();
+      // 成功：先让按钮播「展开回胶囊 + 对勾」成功态，再收起表单并刷新列表
+      setBindDone((prev) => new Set(prev).add(sys));
+      setBindBusy(null);
+      if (sys === 'jwxt') invalidateJwxt();
+      setTimeout(() => {
+        setOpenSys(null);
+        loadBinds();
+        setBindDone((prev) => { const n = new Set(prev); n.delete(sys); return n; });
+      }, 950);
     } catch (e) {
       Alert.alert('绑定失败', (e as Error).message);
-    } finally {
       setBindBusy(null);
     }
-  }, [bindForm, loadBinds]);
+  }, [bindForm, loadBinds, invalidateJwxt]);
 
   const doUnbind = useCallback(async (sys: SysCode) => {
     try {
       await authApi.unbindSys(sys);
+      // 解绑成功才作废缓存；失败时保留原数据，避免把还能用的课表清掉
+      if (sys === 'jwxt') invalidateJwxt();
       await loadBinds();
     } catch (e) {
       Alert.alert('解绑失败', (e as Error).message);
     }
-  }, [loadBinds]);
+  }, [loadBinds, invalidateJwxt]);
 
   const doToggleVpn = useCallback(async (sys: SysUserVO, next: boolean) => {
     try {
@@ -189,7 +219,13 @@ export default function LoginBindPage() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {!isAuthed ? (
+        {/*
+          关键：登录 / 注册成功后 AuthContext 会立即 setUser → isAuthed 变 true，
+          若此刻直接切成 BindCard，主登录按钮上「已登录 ✓」的成功动画会被瞬间卸载、
+          用户根本看不到。故在 submitting / success 期间强制保留 AuthCard，
+          等 router.back() 跳走后再自然卸载。
+        */}
+        {(!isAuthed || commitStatus === 'submitting' || commitStatus === 'success') ? (
           <AuthCard
             mode={mode}
             setMode={setMode}
@@ -207,7 +243,7 @@ export default function LoginBindPage() {
             setForgotOpen={setForgotOpen}
             countdown={countdown}
             sendCode={sendCode}
-            loading={loading}
+            commitStatus={commitStatus}
             error={error}
             onSubmit={onSubmit}
             onForgot={onForgot}
@@ -225,6 +261,7 @@ export default function LoginBindPage() {
             doBind={doBind}
             doUnbind={doUnbind}
             doToggleVpn={doToggleVpn}
+            bindDone={bindDone}
           />
         )}
       </ScrollView>
@@ -251,7 +288,7 @@ function AuthCard(props: {
   setForgotOpen: (v: boolean) => void;
   countdown: number;
   sendCode: () => void;
-  loading: boolean;
+  commitStatus: CommitStatus;
   error: string | null;
   onSubmit: () => void;
   onForgot: () => void;
@@ -259,7 +296,7 @@ function AuthCard(props: {
   const {
     mode, setMode, username, setUsername, password, setPassword, email, setEmail,
     code, setCode, showPwd, setShowPwd, forgotOpen, setForgotOpen, countdown, sendCode,
-    loading, error, onSubmit, onForgot,
+    commitStatus, error, onSubmit, onForgot,
   } = props;
 
   const registerMode = mode === 'register';
@@ -335,11 +372,12 @@ function AuthCard(props: {
         {error && <Text style={styles.error}>{error}</Text>}
 
         <View style={styles.gap} />
-        <StickerButton
+        <CommitButton
           label={forgotOpen ? '重置密码' : registerMode ? '注册并登录' : '登录'}
+          successLabel={forgotOpen ? '已重置' : '已登录'}
           fill={C.lime}
           fg={C.ink}
-          loading={loading}
+          status={commitStatus}
           onPress={forgotOpen ? onForgot : onSubmit}
         />
 
@@ -474,8 +512,9 @@ function BindCard(props: {
   doBind: (s: SysCode) => void;
   doUnbind: (s: SysCode) => void;
   doToggleVpn: (s: SysUserVO, next: boolean) => void;
+  bindDone: Set<SysCode>;
 }) {
-  const { user, binds, bindLoading, openSys, setOpenSys, bindForm, setBindForm, bindBusy, doBind, doUnbind, doToggleVpn } = props;
+  const { user, binds, bindLoading, openSys, setOpenSys, bindForm, setBindForm, bindBusy, doBind, doUnbind, doToggleVpn, bindDone } = props;
 
   return (
     <View style={styles.bindWrap}>
@@ -519,6 +558,8 @@ function BindCard(props: {
             const isOpen = openSys === sys;
             const f = bindForm[sys] || { account: '', password: '' };
             const busy = bindBusy === sys;
+            const done = bindDone.has(sys);
+            const cardStatus: CommitStatus = busy ? 'submitting' : done ? 'success' : 'idle';
 
             return (
               <Sticker
@@ -635,11 +676,12 @@ function BindCard(props: {
                       onChange={(v) => setBindForm({ ...bindForm, [sys]: { ...f, password: v } })}
                       secure
                     />
-                    <StickerButton
+                    <CommitButton
                       label={busy ? '绑定中…' : '确认绑定'}
+                      successLabel="已绑定"
                       fill={C.lime}
                       fg={C.ink}
-                      loading={busy}
+                      status={cardStatus}
                       onPress={() => doBind(sys)}
                     />
                     <Text style={styles.bindNote}>

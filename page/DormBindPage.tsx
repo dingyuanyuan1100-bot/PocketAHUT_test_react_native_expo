@@ -1,13 +1,5 @@
-import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
@@ -18,6 +10,7 @@ import StatusPill, { GuestPill } from '../template/StatusPill';
 import Chip from '../template/Chip';
 import Sticker from '../template/Sticker';
 import StickerField, { FieldInput } from '../template/StickerField';
+import CommitButton, { type CommitStatus } from '../template/CommitButton';
 import { C, DISPLAY, R, SHADOW, inkA } from '../template/theme';
 import { useDormBind, useDormBinding, useDormBuildings } from '../hooks/useElectricity';
 import { useAuth } from '../store/AuthContext';
@@ -47,6 +40,13 @@ export default function DormBindPage() {
   const roomValid = /^\d{3}$/.test(roomNo);
   const canSubmit = !!ldId && roomValid;
 
+  const [bindLocal, setBindLocal] = useState<CommitStatus>('idle');
+  // 表单一改就退出成功态：否则 success 会锁住按钮，用户改了房间也没法再次提交
+  useEffect(() => {
+    if (bindLocal === 'success') setBindLocal('idle');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xiaoqu, ldId, roomNo]);
+
   const statusPill = !booted ? (
     <StatusPill label="加载中" />
   ) : !isAuthed ? (
@@ -61,16 +61,20 @@ export default function DormBindPage() {
 
   const submit = () => {
     if (!canSubmit) return;
+    setBindLocal('submitting');
     bindMutation.mutate(
       { xiaoqu, ld_id: ldId, room_no: roomNo },
       {
         onSuccess: () => {
+          setBindLocal('success');
           Alert.alert('绑定成功', `已绑定 ${buildingName(buildingsQ.data, ldId)} ${roomNo} 室`, [
             { text: '去查电费', onPress: () => router.replace('/electricity') },
             { text: '留在本页', style: 'cancel' },
           ]);
         },
         onError: (err) => {
+          setBindLocal('error');
+          setTimeout(() => setBindLocal((s) => (s === 'error' ? 'idle' : s)), 600);
           const message =
             typeof err === 'object' && err && 'message' in err
               ? String((err as { message?: string }).message ?? '')
@@ -188,22 +192,16 @@ export default function DormBindPage() {
             <Text style={styles.fieldError}>房间号必须是 3 位数字（后端强校验）</Text>
           )}
 
-          <Pressable onPress={submit} disabled={!canSubmit || bindMutation.isPending} style={styles.ctaWrap}>
-            <Sticker
-              style={styles.cta}
-              fill={canSubmit ? C.ink : C.oat}
-              radius={999}
-              offset={canSubmit ? SHADOW.lg : 0}
-            >
-              {bindMutation.isPending ? (
-                <ActivityIndicator color={C.lime} />
-              ) : (
-                <Text style={[styles.ctaText, !canSubmit && styles.ctaTextDisabled]}>
-                  {bindingQ.status === 'ready' ? '覆盖绑定' : '确认绑定'}
-                </Text>
-              )}
-            </Sticker>
-          </Pressable>
+          <CommitButton
+            label={bindingQ.status === 'ready' ? '覆盖绑定' : '确认绑定'}
+            successLabel="已绑定"
+            fill={C.lime}
+            fg={C.ink}
+            status={bindMutation.isPending ? 'submitting' : bindLocal}
+            disabled={!canSubmit}
+            onPress={submit}
+            style={styles.ctaWrap}
+          />
 
           <Text style={styles.footNote}>
             房间号与电表一一对应，填错会导致查到别处的余额，请核对宿舍门牌。
@@ -347,19 +345,6 @@ const styles = StyleSheet.create({
   ctaWrap: {
     alignSelf: 'stretch',
     marginTop: 10,
-  },
-  cta: {
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaText: {
-    fontFamily: DISPLAY,
-    fontSize: 16,
-    color: C.lime,
-  },
-  ctaTextDisabled: {
-    color: inkA(0.4),
   },
   footNote: {
     fontSize: 10.5,

@@ -11,6 +11,7 @@
  */
 import { REFRESH_TOKEN_KEY, TOKEN_KEY } from '../api/config';
 import { tokenStorage } from './storage';
+import { clearSysCreds } from './creds';
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
@@ -52,5 +53,7 @@ export const session = {
     refreshToken = null;
     void tokenStorage.remove(TOKEN_KEY);
     void tokenStorage.remove(REFRESH_TOKEN_KEY);
+    // 登出同时清除本机子系统凭证（与官方客户端行为一致）
+    void clearSysCreds();
   },
 };

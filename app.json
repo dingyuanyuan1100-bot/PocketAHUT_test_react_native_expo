@@ -18,13 +18,18 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.pocketan.worker"
+      "package": "com.pocketan.worker",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "https://ahut.domye.top"
+      "apiBaseUrl": "https://ahut.domye.top",
+      "router": {}
     },
     "plugins": [
       "expo-router",

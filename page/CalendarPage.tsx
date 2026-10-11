@@ -183,6 +183,8 @@ export default function CalendarPage() {
   const confirmPicker = (y: number, m: number) => {
     setViewYear(y);
     setViewMonth(m);
+    // 切换月份后将选中日期落到新月份第一天，避免详情卡仍显示旧月份日期。
+    setSelectedKey(`${y}-${m}-1`);
     setPickerOpen(false);
   };
 
@@ -275,18 +277,18 @@ export default function CalendarPage() {
             <View style={styles.detailCard}>
               <View style={styles.detailHeader}>
                 <Text style={styles.detailDate}>{detailText}</Text>
-                <TouchableOpacity activeOpacity={0.8} style={styles.addBtn}>
-                  <Feather name="plus" size={16} color={C.ink} />
-                </TouchableOpacity>
+                <View style={styles.dateBadge}>
+                  <Feather name="calendar" size={13} color={C.ink} />
+                  <Text style={styles.dateBadgeText}>校历</Text>
+                </View>
               </View>
 
               {selectedEvents.length > 0 ? (
                 <View style={styles.eventList}>
                   {selectedEvents.map((ev) => (
                     <View key={ev.id} style={styles.eventRow}>
-                      <View style={styles.timeCol}>
-                        <Text style={styles.eventTime}>{ev.start_date.slice(5)}</Text>
-                        <View style={[styles.eventDot, { backgroundColor: C.lime }]} />
+                      <View style={styles.eventIcon}>
+                        <Feather name="calendar" size={15} color={C.ink} />
                       </View>
                       <View style={styles.eventCard}>
                         <Text style={styles.eventTitle}>{ev.title}</Text>
@@ -441,13 +443,20 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: C.ink,
   },
-  addBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  dateBadge: {
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 15,
     backgroundColor: C.cream,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 5,
+  },
+  dateBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: C.ink,
   },
   eventList: {
     gap: 12,
@@ -456,20 +465,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  timeCol: {
-    width: 40,
+  eventIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: C.lime,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
-  },
-  eventTime: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: C.ink,
-  },
-  eventDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
   eventCard: {
     flex: 1,

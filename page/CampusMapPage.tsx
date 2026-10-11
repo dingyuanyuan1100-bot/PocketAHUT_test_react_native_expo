@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import PageHeader from '../template/PageHeader';
 import RevealGroup from '../template/RevealGroup';
 import Sticker from '../template/Sticker';
+import BottomDrawer from '../template/motion/BottomDrawer';
 import { C, DISPLAY, FeatherName, inkA, R, SHADOW } from '../template/theme';
 
 /**
@@ -20,22 +21,28 @@ const CATS = ['全部', '教学楼', '宿舍', '食堂', '图书馆'] as const;
 type Spot = {
   name: string;
   zone: string;
-  distance: string;
   icon: FeatherName;
   cat: (typeof CATS)[number];
 };
 
 const SPOTS: Spot[] = [
-  { name: '东教学楼 D302', zone: '教学区', distance: '320m', icon: 'map-pin', cat: '教学楼' },
-  { name: '图书馆', zone: '教学区', distance: '450m', icon: 'book-open', cat: '图书馆' },
-  { name: 'K3 学生公寓', zone: '生活区', distance: '180m', icon: 'home', cat: '宿舍' },
-  { name: '第一食堂', zone: '生活区', distance: '260m', icon: 'coffee', cat: '食堂' },
-  { name: '体育馆', zone: '运动区', distance: '600m', icon: 'activity', cat: '教学楼' },
+  { name: '东教学楼 D302', zone: '教学区', icon: 'map-pin', cat: '教学楼' },
+  { name: '图书馆', zone: '教学区', icon: 'book-open', cat: '图书馆' },
+  { name: 'K3 学生公寓', zone: '生活区', icon: 'home', cat: '宿舍' },
+  { name: '第一食堂', zone: '生活区', icon: 'coffee', cat: '食堂' },
+  { name: '体育馆', zone: '运动区', icon: 'activity', cat: '教学楼' },
 ];
 
 export default function CampusMapPage() {
   const [cat, setCat] = useState<(typeof CATS)[number]>('全部');
-  const list = cat === '全部' ? SPOTS : SPOTS.filter((s) => s.cat === cat);
+  const [query, setQuery] = useState('');
+  const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
+  const keyword = query.trim().toLocaleLowerCase();
+  const list = SPOTS.filter((s) => {
+    const matchesCategory = cat === '全部' || s.cat === cat;
+    const matchesQuery = !keyword || `${s.name} ${s.zone} ${s.cat}`.toLocaleLowerCase().includes(keyword);
+    return matchesCategory && matchesQuery;
+  });
 
   return (
     <View style={styles.page}>
@@ -57,7 +64,7 @@ export default function CampusMapPage() {
             </View>
             <Text style={styles.heroCaption}>校内导航 · 找楼 · 找教室</Text>
             <View style={styles.newBadge}>
-              <Text style={styles.newBadgeText}>NEW</Text>
+              <Text style={styles.newBadgeText}>示例地点</Text>
             </View>
           </View>
         </Sticker>
@@ -66,7 +73,20 @@ export default function CampusMapPage() {
         <RevealGroup>
           <Sticker fill={C.white} radius={12} offset={SHADOW.md} wrapStyle={styles.searchWrap} style={styles.search}>
             <Feather name="search" size={16} color={inkA(0.55)} />
-            <Text style={styles.searchPlaceholder}>搜索目的地</Text>
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="搜索地点、区域或类别"
+              placeholderTextColor={inkA(0.45)}
+              returnKeyType="search"
+              style={styles.searchInput}
+              accessibilityLabel="搜索校园地点"
+            />
+            {!!query && (
+              <TouchableOpacity onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="清除搜索">
+                <Feather name="x-circle" size={17} color={inkA(0.45)} />
+              </TouchableOpacity>
+            )}
           </Sticker>
 
           {/* ===================== 分类 chips ===================== */}
@@ -87,14 +107,20 @@ export default function CampusMapPage() {
           <Sticker fill={C.white} radius={R.hero} offset={SHADOW.lg} style={styles.listCard}>
             {list.map((s, i) => (
               <View key={s.name}>
-                <TouchableOpacity activeOpacity={0.8} style={styles.spotRow}>
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={styles.spotRow}
+                  onPress={() => setSelectedSpot(s)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${s.name}，${s.zone}，查看地点信息`}
+                >
                   <View style={styles.spotIcon}>
                     <Feather name={s.icon} size={18} color={C.ink} />
                   </View>
                   <View style={styles.spotText}>
                     <Text style={styles.spotName}>{s.name}</Text>
                     <Text style={styles.spotMeta}>
-                      {s.zone} · {s.distance}
+                      {s.zone}
                     </Text>
                   </View>
                   <Feather name="chevron-right" size={18} color={inkA(0.45)} />
@@ -102,10 +128,41 @@ export default function CampusMapPage() {
                 {i < list.length - 1 && <View style={styles.divider} />}
               </View>
             ))}
-            {list.length === 0 && <Text style={styles.empty}>该分类下暂无地点</Text>}
+            {list.length === 0 && (
+              <Text style={styles.empty}>{keyword ? '没有找到匹配地点，试试其他关键词' : '该分类下暂无地点'}</Text>
+            )}
           </Sticker>
         </RevealGroup>
       </ScrollView>
+      <BottomDrawer open={selectedSpot !== null} onClose={() => setSelectedSpot(null)}>
+        {selectedSpot && (
+          <View style={styles.detailSheet}>
+            <View style={styles.sheetHeader}>
+              <View style={styles.sheetIcon}>
+                <Feather name={selectedSpot.icon} size={20} color={C.ink} />
+              </View>
+              <View style={styles.sheetTitleGroup}>
+                <Text style={styles.sheetTitle}>{selectedSpot.name}</Text>
+                <Text style={styles.sheetMeta}>{selectedSpot.cat} · {selectedSpot.zone}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setSelectedSpot(null)}
+                style={styles.sheetClose}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="关闭地点详情"
+              >
+                <Feather name="x" size={17} color={C.ink} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.distanceRow}>
+              <Feather name="info" size={15} color={C.ink} />
+              <Text style={styles.distanceText}>示例地点信息</Text>
+            </View>
+            <Text style={styles.mapNotice}>真实校园位置与导航服务尚未接入。</Text>
+          </View>
+        )}
+      </BottomDrawer>
     </View>
   );
 }
@@ -167,9 +224,12 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
   },
-  searchPlaceholder: {
+  searchInput: {
+    flex: 1,
+    height: '100%',
     fontSize: 13,
-    color: inkA(0.55),
+    color: C.ink,
+    paddingVertical: 0,
   },
 
   // ===================== chips =====================
@@ -241,5 +301,63 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     color: inkA(0.5),
+  },
+  detailSheet: {
+    gap: 16,
+    paddingBottom: 8,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sheetIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    backgroundColor: C.lime,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetTitleGroup: {
+    flex: 1,
+    gap: 3,
+  },
+  sheetTitle: {
+    fontFamily: DISPLAY,
+    fontSize: 19,
+    color: C.ink,
+  },
+  sheetMeta: {
+    fontSize: 12,
+    color: inkA(0.58),
+  },
+  sheetClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: C.cream,
+    borderWidth: 1,
+    borderColor: C.oat,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  distanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: C.cream,
+  },
+  distanceText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.ink,
+  },
+  mapNotice: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: inkA(0.58),
   },
 });

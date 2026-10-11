@@ -156,8 +156,8 @@ export default function SmartWaterPage() {
               tone="info"
               icon={<Feather name="maximize" size={30} color={C.ink} />}
               title="请先扫码建立会话"
-              description="还没有扫过设备码，服务端无法确认你的会话。先扫一次设备上的二维码，再回来刷新。"
-              primaryAction={{ label: '刷新订单', onPress: () => refetch() }}
+              description="还没有扫过设备码，服务端无法确认你的会话。先连接设备，订单会自动刷新。"
+              primaryAction={{ label: '去扫码连接', onPress: gotoScan, arrow: true }}
               link={{ label: '返回上一页', onPress: () => router.back() }}
             />
           )}

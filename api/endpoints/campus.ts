@@ -66,8 +66,10 @@ export const electricityApi = {
   /**
    * 电费余额。**不接受参数**，后端按已绑定的宿舍房间去查 ——
    * 未绑定宿舍时必然失败，页面必须先处理「未绑定」态。
+   * ⚠️ 需携带 vpncas 系统凭证（X-System-Creds 头），绑定 VPN 后才会带上。
    */
-  getBalance: () => http.get<ElectricityBalance>('/electricity/balance'),
+  getBalance: () =>
+    http.get<ElectricityBalance>('/electricity/balance', { sysCodes: ['vpncas'] }),
 
   /**
    * 创建充值订单，返回微信 Native 支付链接。

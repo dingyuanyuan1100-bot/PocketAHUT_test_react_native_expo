@@ -2,6 +2,7 @@ import { API_BASE_URL, API_TIMEOUT_MS } from './config';
 import { ApiError } from './contracts';
 import type { ApiResponse, RefreshTokenResponse } from './contracts';
 import { session } from '../lib/session';
+import { buildSystemCredsHeader } from '../lib/creds';
 
 type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
@@ -26,6 +27,17 @@ export type RequestOptions = {
   /** 是否携带 Authorization 头，默认 true */
   auth?: boolean;
   /**
+   * 需要携带子系统凭证的 sysCode 列表（如电费 ['vpncas']）。
+   * 请求时会从本地读取对应凭证并编码进 `X-System-Creds` 请求头；
+   * 未绑定 / 未存凭证的 sysCode 会被静默跳过（不带头），由后端按业务规则报错。
+   */
+  sysCodes?: string[];
+  /**
+   * 跳过 X-System-Creds 头。
+   * 用于登录 / 注册 / 微信绑定等「不携带设备凭证」的公开或认证接口。
+   */
+  skipSystemCreds?: boolean;
+  /**
    * 跳过 401 自动刷新。
    * 用于 `/user/logout`（文档标注 skipAuthRefresh）与刷新接口自身，避免递归。
    */
@@ -45,13 +57,31 @@ export function buildQuery(query?: QueryParams): string {
 
 /** 单次真实网络请求：解包 `{code,message,data}` 信封，非 200 抛 ApiError */
 async function rawRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, query, timeoutMs = API_TIMEOUT_MS, auth = true } = opts;
+  const {
+    method = 'GET',
+    body,
+    query,
+    timeoutMs = API_TIMEOUT_MS,
+    auth = true,
+    sysCodes,
+    skipSystemCreds = false,
+  } = opts;
 
   const token = auth ? session.getAccessToken() : null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   const url = `${API_BASE_URL}${path}${buildQuery(query)}`;
+
+  // 子系统凭证头（X-System-Creds）：读取失败只降级为不带头，不阻塞请求
+  let systemCredsHeader: string | undefined;
+  if (!skipSystemCreds && sysCodes?.length) {
+    try {
+      systemCredsHeader = await buildSystemCredsHeader(sysCodes);
+    } catch {
+      systemCredsHeader = undefined;
+    }
+  }
 
   try {
     const res = await fetch(url, {
@@ -60,6 +90,7 @@ async function rawRequest<T>(path: string, opts: RequestOptions = {}): Promise<T
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(systemCredsHeader ? { 'X-System-Creds': systemCredsHeader } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: controller.signal,
